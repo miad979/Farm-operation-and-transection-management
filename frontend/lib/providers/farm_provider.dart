@@ -177,6 +177,7 @@ class FarmProvider extends ChangeNotifier {
     String? breed,
     String? gender,
     String? healthStatus,
+    double defaultDailyMilk = 0,
     String? notes,
   }) async {
     if (_isOffline(token)) {
@@ -187,6 +188,7 @@ class FarmProvider extends ChangeNotifier {
         breed: breed,
         gender: gender,
         healthStatus: healthStatus,
+        defaultDailyMilk: defaultDailyMilk,
         notes: notes,
       );
       await loadAll(token);
@@ -200,6 +202,7 @@ class FarmProvider extends ChangeNotifier {
       breed: breed,
       gender: gender,
       healthStatus: healthStatus,
+      defaultDailyMilk: defaultDailyMilk,
       notes: notes,
     );
     await loadAll(token);
@@ -214,6 +217,7 @@ class FarmProvider extends ChangeNotifier {
     required String breed,
     required String gender,
     required String healthStatus,
+    required double defaultDailyMilk,
     required bool vaccinated,
     required String pregnancyStatus,
     required String notes,
@@ -227,6 +231,7 @@ class FarmProvider extends ChangeNotifier {
         breed: breed,
         gender: gender,
         healthStatus: healthStatus,
+        defaultDailyMilk: defaultDailyMilk,
         vaccinated: vaccinated,
         pregnancyStatus: pregnancyStatus,
         notes: notes,
@@ -243,6 +248,7 @@ class FarmProvider extends ChangeNotifier {
       breed: breed,
       gender: gender,
       healthStatus: healthStatus,
+      defaultDailyMilk: defaultDailyMilk,
       vaccinated: vaccinated,
       pregnancyStatus: pregnancyStatus,
       notes: notes,

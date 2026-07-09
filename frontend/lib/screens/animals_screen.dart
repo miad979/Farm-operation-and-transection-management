@@ -339,6 +339,12 @@ class _AnimalCard extends StatelessWidget {
                 ),
                 if (animal.breed != null && animal.breed!.isNotEmpty)
                   _StatusChip(label: animal.breed!, good: true),
+                if (animal.defaultDailyMilk > 0)
+                  _StatusChip(
+                    label:
+                        '${animal.defaultDailyMilk.toStringAsFixed(1)} L/day',
+                    good: true,
+                  ),
               ],
             ),
             const Spacer(),
@@ -444,6 +450,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
   final _id = TextEditingController();
   final _name = TextEditingController();
   final _breed = TextEditingController();
+  final _dailyMilk = TextEditingController();
   final _notes = TextEditingController();
   String _type = 'Cow';
   String _gender = 'Female';
@@ -459,6 +466,9 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
       _id.text = animal.animalIdNumber;
       _name.text = animal.name;
       _breed.text = animal.breed ?? '';
+      _dailyMilk.text = animal.defaultDailyMilk == 0
+          ? ''
+          : animal.defaultDailyMilk.toStringAsFixed(1);
       _notes.text = animal.notes ?? '';
       _type = animal.type;
       _gender = animal.gender ?? 'Female';
@@ -473,6 +483,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
     _id.dispose();
     _name.dispose();
     _breed.dispose();
+    _dailyMilk.dispose();
     _notes.dispose();
     super.dispose();
   }
@@ -551,6 +562,16 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
                 ],
               ),
               const SizedBox(height: 12),
+              TextField(
+                controller: _dailyMilk,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Normal daily milk (L)',
+                  helperText:
+                      'Automatically counted each day until you enter actual milk.',
+                ),
+              ),
+              const SizedBox(height: 12),
               SwitchListTile(
                 value: _vaccinated,
                 onChanged: (value) => setState(() => _vaccinated = value),
@@ -608,6 +629,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
     }
     final provider = context.read<FarmProvider>();
     final animal = widget.animal;
+    final defaultDailyMilk = double.tryParse(_dailyMilk.text.trim()) ?? 0;
     if (animal == null) {
       await provider.addAnimal(
         token: token,
@@ -617,6 +639,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
         breed: _breed.text.trim(),
         gender: _gender,
         healthStatus: _health,
+        defaultDailyMilk: defaultDailyMilk,
         notes: _notes.text.trim(),
       );
     } else {
@@ -629,6 +652,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
         breed: _breed.text.trim(),
         gender: _gender,
         healthStatus: _health,
+        defaultDailyMilk: defaultDailyMilk,
         vaccinated: _vaccinated,
         pregnancyStatus: _pregnancy,
         notes: _notes.text.trim(),
@@ -658,12 +682,18 @@ class _MilkSheet extends StatefulWidget {
 
 class _MilkSheetState extends State<_MilkSheet> {
   final _morning = TextEditingController();
-  final _evening = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animal.defaultDailyMilk > 0) {
+      _morning.text = widget.animal.defaultDailyMilk.toStringAsFixed(1);
+    }
+  }
 
   @override
   void dispose() {
     _morning.dispose();
-    _evening.dispose();
     super.dispose();
   }
 
@@ -691,13 +721,11 @@ class _MilkSheetState extends State<_MilkSheet> {
             TextField(
               controller: _morning,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Morning milk (L)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _evening,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Evening milk (L)'),
+              decoration: const InputDecoration(
+                labelText: 'Actual milk today (L)',
+                helperText:
+                    'This replaces the normal daily milk for today only.',
+              ),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -713,14 +741,13 @@ class _MilkSheetState extends State<_MilkSheet> {
 
   Future<void> _save() async {
     final token = context.read<AuthProvider>().accessToken;
-    final morning = double.tryParse(_morning.text.trim()) ?? 0;
-    final evening = double.tryParse(_evening.text.trim()) ?? 0;
-    if (token == null || (morning + evening) <= 0) return;
+    final totalMilk = double.tryParse(_morning.text.trim()) ?? 0;
+    if (token == null || totalMilk <= 0) return;
     await context.read<FarmProvider>().addMilkRecord(
       token: token,
       animalId: widget.animal.id,
-      morningMilk: morning,
-      eveningMilk: evening,
+      morningMilk: totalMilk,
+      eveningMilk: 0,
     );
     if (mounted) Navigator.of(context).pop();
   }

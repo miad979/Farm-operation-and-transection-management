@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db.models import Avg, Sum
 from django.utils import timezone
@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .milk_totals import milk_total_with_defaults
 from .models import Animal, MilkProduction
 from .serializers import AnimalSerializer, MilkProductionSerializer
 
@@ -97,7 +98,7 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Use YYYY-MM-DD format."}, status=status.HTTP_400_BAD_REQUEST)
 
         records = self.get_queryset().filter(production_date=parsed_date)
-        total = records.aggregate(total=Sum("total_milk"))["total"] or 0
+        total = milk_total_with_defaults(request.user, parsed_date)
         avg_per_animal = records.aggregate(avg=Avg("total_milk"))["avg"] or 0
         return Response(
             {
@@ -111,7 +112,9 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path=r"monthly-report/(?P<year>\d{4})/(?P<month>\d{1,2})")
     def monthly_report(self, request, year=None, month=None):
         records = self.get_queryset().filter(production_date__year=year, production_date__month=month)
-        total = records.aggregate(total=Sum("total_milk"))["total"] or 0
+        start_date = datetime.strptime(f"{year}-{int(month):02d}-01", "%Y-%m-%d").date()
+        end_date = timezone.localdate() if int(year) == timezone.localdate().year and int(month) == timezone.localdate().month else _month_end(start_date)
+        total = milk_total_with_defaults(request.user, start_date, end_date)
         best = records.order_by("-total_milk").first()
         return Response(
             {
@@ -140,3 +143,9 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
             .first()
         )
         return Response(aggregated or {"detail": "No records for this month."})
+
+
+def _month_end(month_start):
+    if month_start.month == 12:
+        return datetime.strptime(f"{month_start.year}-12-31", "%Y-%m-%d").date()
+    return datetime.strptime(f"{month_start.year}-{month_start.month + 1:02d}-01", "%Y-%m-%d").date() - timedelta(days=1)

@@ -125,6 +125,7 @@ class ApiService {
     String? breed,
     String? gender,
     String? healthStatus,
+    double defaultDailyMilk = 0,
     String? notes,
   }) async {
     await _postMap(token, '/animals/', {
@@ -135,6 +136,7 @@ class ApiService {
       if (gender != null && gender.isNotEmpty) 'gender': gender,
       if (healthStatus != null && healthStatus.isNotEmpty)
         'health_status': healthStatus,
+      'default_daily_milk': defaultDailyMilk.toStringAsFixed(2),
       if (notes != null && notes.isNotEmpty) 'notes': notes,
     });
   }
@@ -148,6 +150,7 @@ class ApiService {
     required String breed,
     required String gender,
     required String healthStatus,
+    required double defaultDailyMilk,
     required bool vaccinated,
     required String pregnancyStatus,
     required String notes,
@@ -159,6 +162,7 @@ class ApiService {
       'breed': breed,
       'gender': gender,
       'health_status': healthStatus,
+      'default_daily_milk': defaultDailyMilk.toStringAsFixed(2),
       'vaccinated': vaccinated,
       'pregnancy_status': pregnancyStatus,
       'notes': notes,

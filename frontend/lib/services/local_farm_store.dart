@@ -138,8 +138,18 @@ class LocalFarmStore {
     );
     final personalBalance =
         personalIncome + personalFarmTransfers - personalExpenses;
-    final monthlyMilk = _sum(monthMilk, 'total_milk');
-    final todayMilkLiters = _sum(todayMilk, 'total_milk');
+    final monthlyMilk = _milkTotalWithDefaults(
+      activeAnimals,
+      monthMilk.toList(),
+      DateTime(year, month),
+      DateTime(year, month, now.day),
+    );
+    final todayMilkLiters = _milkTotalWithDefaults(
+      activeAnimals,
+      todayMilk.toList(),
+      DateTime(now.year, now.month, now.day),
+      DateTime(now.year, now.month, now.day),
+    );
     final dailyAverageMilk = now.day == 0 ? 0 : monthlyMilk / now.day;
     final averagePerCow = activeAnimals.isEmpty
         ? 0
@@ -284,6 +294,7 @@ class LocalFarmStore {
     String? breed,
     String? gender,
     String? healthStatus,
+    double defaultDailyMilk = 0,
     String? notes,
   }) async {
     final animals = await _list(_animalsKey);
@@ -295,6 +306,7 @@ class LocalFarmStore {
       'breed': breed ?? '',
       'gender': gender ?? '',
       'health_status': healthStatus ?? 'Healthy',
+      'default_daily_milk': defaultDailyMilk,
       'vaccinated': false,
       'pregnancy_status': 'Not Pregnant',
       'is_active': true,
@@ -311,6 +323,7 @@ class LocalFarmStore {
     required String breed,
     required String gender,
     required String healthStatus,
+    required double defaultDailyMilk,
     required bool vaccinated,
     required String pregnancyStatus,
     required String notes,
@@ -323,6 +336,7 @@ class LocalFarmStore {
         'breed': breed,
         'gender': gender,
         'health_status': healthStatus,
+        'default_daily_milk': defaultDailyMilk,
         'vaccinated': vaccinated,
         'pregnancy_status': pregnancyStatus,
         'notes': notes,
@@ -839,6 +853,33 @@ class LocalFarmStore {
 
   double _sum(Iterable<Map<String, dynamic>> items, String key) {
     return items.fold<double>(0, (total, item) => total + _num(item[key]));
+  }
+
+  double _milkTotalWithDefaults(
+    List<Map<String, dynamic>> animals,
+    List<Map<String, dynamic>> records,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    final manualTotal = _sum(records, 'total_milk');
+    final manualPairs = records
+        .map((item) => '${item['animal']}|${item['production_date']}')
+        .toSet();
+    var defaultTotal = 0.0;
+    var day = DateTime(startDate.year, startDate.month, startDate.day);
+    final lastDay = DateTime(endDate.year, endDate.month, endDate.day);
+    while (!day.isAfter(lastDay)) {
+      final dateText = day.toIso8601String().split('T').first;
+      for (final animal in animals) {
+        final dailyMilk = _num(animal['default_daily_milk']);
+        if (dailyMilk <= 0) continue;
+        if (!manualPairs.contains('${animal['id']}|$dateText')) {
+          defaultTotal += dailyMilk;
+        }
+      }
+      day = day.add(const Duration(days: 1));
+    }
+    return manualTotal + defaultTotal;
   }
 
   double _num(dynamic value) {

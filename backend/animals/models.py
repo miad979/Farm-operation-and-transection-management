@@ -27,6 +27,7 @@ class Animal(models.Model):
     purchase_date = models.DateField(null=True, blank=True)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     current_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    default_daily_milk = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     health_status = models.CharField(max_length=50, choices=HEALTH_CHOICES, default="Healthy")
     vaccinated = models.BooleanField(default=False)
     vaccination_date = models.DateField(null=True, blank=True)

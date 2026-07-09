@@ -1539,24 +1539,14 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
           onChanged: (value) => setState(() => _animalId = value),
         ),
       const SizedBox(height: 12),
-      Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _morningMilk,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Morning milk (L)'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _eveningMilk,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Evening milk (L)'),
-            ),
-          ),
-        ],
+      TextField(
+        controller: _morningMilk,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          labelText: 'Actual milk today (L)',
+          helperText:
+              'Only enter this when today is different from the cow normal milk.',
+        ),
       ),
     ];
   }
@@ -1771,14 +1761,13 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       final animals = provider.animals;
       final animalId =
           _animalId ?? (animals.isNotEmpty ? animals.first.id : null);
-      final morning = double.tryParse(_morningMilk.text.trim()) ?? 0;
-      final evening = double.tryParse(_eveningMilk.text.trim()) ?? 0;
-      if (animalId == null || morning + evening <= 0) return;
+      final totalMilk = double.tryParse(_morningMilk.text.trim()) ?? 0;
+      if (animalId == null || totalMilk <= 0) return;
       await provider.addMilkRecord(
         token: token,
         animalId: animalId,
-        morningMilk: morning,
-        eveningMilk: evening,
+        morningMilk: totalMilk,
+        eveningMilk: 0,
       );
     } else if (_type == 'inventory') {
       final quantity = double.tryParse(_quantity.text.trim());

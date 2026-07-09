@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import Avg, Sum
@@ -6,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from animals.milk_totals import milk_total_with_defaults
+from animals.models import Animal
 from animals.models import MilkProduction
 from financial.models import CapitalContribution, Expense, FamilyWithdrawal, PersonalTransaction, Sale
 
@@ -22,8 +25,9 @@ class TodaySummaryView(APIView):
         capital_qs = CapitalContribution.objects.filter(user=request.user, contribution_date=today)
         personal_qs = PersonalTransaction.objects.filter(user=request.user, transaction_date=today)
 
-        milk_total = milk_qs.aggregate(total=Sum("total_milk"))["total"] or Decimal("0")
-        milk_avg = milk_qs.aggregate(avg=Avg("total_milk"))["avg"] or Decimal("0")
+        milk_total = milk_total_with_defaults(request.user, today)
+        milk_cows = Animal.objects.filter(user=request.user, is_active=True, default_daily_milk__gt=0).count()
+        milk_avg = milk_total / max(1, milk_cows)
         income_total = sales_qs.aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
         expense_total = expenses_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
         withdrawals_total = withdrawals_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -43,7 +47,7 @@ class TodaySummaryView(APIView):
                 "date": today,
                 "milk_production": {
                     "total_liters": milk_total,
-                    "count_cows": milk_qs.count(),
+                    "count_cows": max(milk_qs.count(), milk_cows),
                     "average_per_cow": round(float(milk_avg), 2) if milk_avg else 0,
                 },
                 "income": {
@@ -97,7 +101,9 @@ class MonthlySummaryView(APIView):
             transaction_date__month=month,
         )
 
-        milk_total = milk_qs.aggregate(total=Sum("total_milk"))["total"] or Decimal("0")
+        period_start = date(year, month, 1)
+        period_end = today if year == today.year and month == today.month else _month_end(period_start)
+        milk_total = milk_total_with_defaults(request.user, period_start, period_end)
         sales_total = sales_qs.aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
         expenses_total = expenses_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
         withdrawals_total = withdrawals_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -118,7 +124,7 @@ class MonthlySummaryView(APIView):
                 "month": month,
                 "milk_production": {
                     "total_liters": milk_total,
-                    "average_daily": round(float(milk_total) / max(1, 30), 2),
+                    "average_daily": round(float(milk_total) / max(1, period_end.day), 2),
                 },
                 "income": {
                     "total": sales_total,
@@ -145,24 +151,15 @@ class InsightsView(APIView):
 
     def get(self, request):
         today = timezone.localdate()
-        current_month_milk = (
-            MilkProduction.objects.filter(
-                user=request.user,
-                production_date__year=today.year,
-                production_date__month=today.month,
-            ).aggregate(total=Sum("total_milk"))["total"]
-            or Decimal("0")
-        )
+        current_month_milk = milk_total_with_defaults(request.user, today.replace(day=1), today)
 
         last_month = 12 if today.month == 1 else today.month - 1
         last_month_year = today.year - 1 if today.month == 1 else today.year
-        previous_month_milk = (
-            MilkProduction.objects.filter(
-                user=request.user,
-                production_date__year=last_month_year,
-                production_date__month=last_month,
-            ).aggregate(total=Sum("total_milk"))["total"]
-            or Decimal("0")
+        previous_start = date(last_month_year, last_month, 1)
+        previous_month_milk = milk_total_with_defaults(
+            request.user,
+            previous_start,
+            _month_end(previous_start),
         )
 
         change = 0
@@ -248,3 +245,9 @@ class CashFlowView(APIView):
                 },
             }
         )
+
+
+def _month_end(month_start):
+    if month_start.month == 12:
+        return date(month_start.year, 12, 31)
+    return date(month_start.year, month_start.month + 1, 1) - timedelta(days=1)

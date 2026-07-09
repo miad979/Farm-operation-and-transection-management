@@ -544,12 +544,14 @@ class _MilkRecordSheetState extends State<_MilkRecordSheet> {
     super.initState();
     final record = widget.record;
     _animalId = _recordId({'id': record?['animal']});
+    final rawTotalMilk = record?['total_milk'];
+    final totalMilk = rawTotalMilk is num
+        ? rawTotalMilk.toDouble()
+        : double.tryParse('$rawTotalMilk') ?? 0;
     _morning = TextEditingController(
-      text: record == null ? '' : '${record['morning_milk'] ?? ''}',
+      text: record == null ? '' : totalMilk.toStringAsFixed(1),
     );
-    _evening = TextEditingController(
-      text: record == null ? '' : '${record['evening_milk'] ?? ''}',
-    );
+    _evening = TextEditingController(text: '');
   }
 
   @override

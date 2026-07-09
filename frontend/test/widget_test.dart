@@ -60,4 +60,30 @@ void main() {
       'farm_transfer',
     );
   });
+
+  test('Offline store counts normal daily milk and manual override', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = LocalFarmStore();
+    final today = DateTime.now().toIso8601String().split('T').first;
+
+    await store.createAnimal(
+      animalIdNumber: 'COW-1',
+      name: 'Maya',
+      type: 'Cow',
+      defaultDailyMilk: 10,
+    );
+
+    var snapshot = await store.loadSnapshot();
+    expect(snapshot.dashboard['milk_production']['total_liters'], 10);
+
+    await store.createMilkProduction(
+      animalId: snapshot.animals.first.id,
+      productionDate: today,
+      morningMilk: 7,
+      eveningMilk: 0,
+    );
+
+    snapshot = await store.loadSnapshot();
+    expect(snapshot.dashboard['milk_production']['total_liters'], 7);
+  });
 }

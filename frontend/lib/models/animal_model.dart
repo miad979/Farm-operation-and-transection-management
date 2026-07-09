@@ -6,6 +6,7 @@ class AnimalModel {
   final String? breed;
   final String? gender;
   final String healthStatus;
+  final double defaultDailyMilk;
   final bool vaccinated;
   final String pregnancyStatus;
   final bool isActive;
@@ -19,6 +20,7 @@ class AnimalModel {
     this.breed,
     this.gender,
     required this.healthStatus,
+    required this.defaultDailyMilk,
     required this.vaccinated,
     required this.pregnancyStatus,
     required this.isActive,
@@ -34,10 +36,16 @@ class AnimalModel {
       breed: json['breed'] as String?,
       gender: json['gender'] as String?,
       healthStatus: (json['health_status'] as String?) ?? 'Healthy',
+      defaultDailyMilk: _toDouble(json['default_daily_milk']),
       vaccinated: (json['vaccinated'] as bool?) ?? false,
       pregnancyStatus: (json['pregnancy_status'] as String?) ?? 'Not Pregnant',
       isActive: (json['is_active'] as bool?) ?? true,
       notes: json['notes'] as String?,
     );
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value') ?? 0;
   }
 }

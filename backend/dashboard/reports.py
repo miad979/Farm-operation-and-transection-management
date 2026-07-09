@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -7,7 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from animals.models import Animal, MilkProduction
+from animals.milk_totals import milk_total_with_defaults
+from animals.models import Animal
 from financial.models import CapitalContribution, Expense, FamilyWithdrawal, Loan, PersonalTransaction, Sale
 
 
@@ -21,7 +22,8 @@ def _report_for_period(user, start_date=None, year=None, month=None):
     withdrawals = FamilyWithdrawal.objects.filter(user=user)
     capital = CapitalContribution.objects.filter(user=user)
     personal = PersonalTransaction.objects.filter(user=user)
-    milk = MilkProduction.objects.filter(user=user)
+    milk_start = None
+    milk_end = None
 
     if start_date:
         sales = sales.filter(sale_date=start_date)
@@ -29,21 +31,24 @@ def _report_for_period(user, start_date=None, year=None, month=None):
         withdrawals = withdrawals.filter(withdrawal_date=start_date)
         capital = capital.filter(contribution_date=start_date)
         personal = personal.filter(transaction_date=start_date)
-        milk = milk.filter(production_date=start_date)
+        milk_start = start_date
+        milk_end = start_date
     if year:
         sales = sales.filter(sale_date__year=year)
         expenses = expenses.filter(expense_date__year=year)
         withdrawals = withdrawals.filter(withdrawal_date__year=year)
         capital = capital.filter(contribution_date__year=year)
         personal = personal.filter(transaction_date__year=year)
-        milk = milk.filter(production_date__year=year)
+        milk_start = datetime.strptime(f"{year}-01-01", "%Y-%m-%d").date()
+        milk_end = datetime.strptime(f"{year}-12-31", "%Y-%m-%d").date()
     if month:
         sales = sales.filter(sale_date__month=month)
         expenses = expenses.filter(expense_date__month=month)
         withdrawals = withdrawals.filter(withdrawal_date__month=month)
         capital = capital.filter(contribution_date__month=month)
         personal = personal.filter(transaction_date__month=month)
-        milk = milk.filter(production_date__month=month)
+        milk_start = datetime.strptime(f"{year}-{month:02d}-01", "%Y-%m-%d").date()
+        milk_end = _month_end(milk_start)
 
     income = _sum(sales, "total_amount")
     business_expenses = _sum(expenses, "amount")
@@ -52,9 +57,13 @@ def _report_for_period(user, start_date=None, year=None, month=None):
     personal_income = _sum(personal.filter(transaction_type="income"), "amount")
     personal_expenses = _sum(personal.filter(transaction_type="expense"), "amount")
     pocket_from_farm = _sum(personal.filter(transaction_type="farm_transfer"), "amount")
+    if milk_start is None:
+        today = timezone.localdate()
+        milk_start = today.replace(day=1)
+        milk_end = today
 
     return {
-        "milk_liters": _sum(milk, "total_milk"),
+        "milk_liters": milk_total_with_defaults(user, milk_start, milk_end) if milk_start else 0,
         "animal_count": Animal.objects.filter(user=user, is_active=True).count(),
         "income": income,
         "business_expenses": business_expenses,
@@ -104,3 +113,9 @@ class FinancialReportView(APIView):
 
     def get(self, request):
         return Response(_report_for_period(request.user))
+
+
+def _month_end(month_start):
+    if month_start.month == 12:
+        return datetime.strptime(f"{month_start.year}-12-31", "%Y-%m-%d").date()
+    return datetime.strptime(f"{month_start.year}-{month_start.month + 1:02d}-01", "%Y-%m-%d").date() - timedelta(days=1)
