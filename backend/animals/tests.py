@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .milk_totals import milk_total_with_defaults
+from .models import MilkRecordAudit
 
 User = get_user_model()
 
@@ -203,3 +204,38 @@ class AnimalsApiTests(APITestCase):
         self.assertEqual(first_response.data["id"], second_response.data["id"])
         self.assertEqual(len(records), 1)
         self.assertEqual(float(dashboard_response.data["milk_production"]["total_liters"]), 6.0)
+
+    def test_milk_record_can_be_deleted_with_reason(self):
+        animal_response = self.client.post(
+            "/api/v1/animals/",
+            {
+                "animal_id_number": "AN006",
+                "name": "Bela",
+                "type": "Cow",
+                "default_daily_milk": "10.00",
+            },
+            format="json",
+        )
+        today = self.client.get("/api/v1/dashboard/today/").data["date"]
+        milk_response = self.client.post(
+            "/api/v1/milk-production/",
+            {
+                "animal": animal_response.data["id"],
+                "production_date": today,
+                "morning_milk": "8.00",
+                "evening_milk": "0.00",
+                "quality_grade": "A",
+            },
+            format="json",
+        )
+
+        delete_response = self.client.post(
+            f"/api/v1/milk-production/{milk_response.data['id']}/delete-with-reason/",
+            {"reason": "Wrong cow selected"},
+            format="json",
+        )
+        dashboard_response = self.client.get("/api/v1/dashboard/today/")
+
+        self.assertEqual(delete_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(MilkRecordAudit.objects.filter(action="deleted").count(), 1)
+        self.assertEqual(float(dashboard_response.data["milk_production"]["total_liters"]), 10.0)

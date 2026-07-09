@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Animal, MilkProduction, MilkProductionRate
+from .models import Animal, MilkProduction, MilkProductionRate, MilkRecordAudit
 
 
 @admin.register(Animal)
@@ -30,3 +30,10 @@ class MilkProductionRateAdmin(admin.ModelAdmin):
     list_display = ("animal", "daily_milk", "effective_date", "created_at")
     list_filter = ("effective_date",)
     search_fields = ("animal__name", "animal__animal_id_number")
+
+
+@admin.register(MilkRecordAudit)
+class MilkRecordAuditAdmin(admin.ModelAdmin):
+    list_display = ("animal", "production_date", "action", "old_total_milk", "new_total_milk", "created_at")
+    list_filter = ("action", "production_date")
+    search_fields = ("animal__name", "animal__animal_id_number", "reason")

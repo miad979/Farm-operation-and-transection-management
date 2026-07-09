@@ -32,7 +32,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final lang = context.watch<LanguageProvider>();
 
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: Text(lang.text('History', 'ইতিহাস')),
@@ -51,6 +51,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           bottom: TabBar(
             isScrollable: true,
             tabs: [
+              const Tab(text: 'Ledger'),
               Tab(text: lang.text('Milk', 'দুধ')),
               Tab(text: lang.text('Sales', 'বিক্রি')),
               Tab(text: lang.text('Farm Cost', 'খামার খরচ')),
@@ -62,6 +63,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
         body: TabBarView(
           children: [
+            _LedgerTab(farm: farm),
             _RecordList(
               records: farm.milkRecords,
               emptyText: lang.text(
@@ -77,6 +79,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     '${record['production_date'] ?? ''} • ${record['quality_grade'] ?? ''}',
                 trailing: '${record['total_milk'] ?? 0} L',
                 onEdit: () => _showMilkSheet(context, record: record),
+                extraActions: [
+                  IconButton(
+                    tooltip: 'Delete with reason',
+                    onPressed: () =>
+                        _showDeleteMilkReasonSheet(context, record),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
               ),
             ),
             _RecordList(
@@ -190,6 +200,302 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
   }
+}
+
+class _LedgerTab extends StatefulWidget {
+  const _LedgerTab({required this.farm});
+
+  final FarmProvider farm;
+
+  @override
+  State<_LedgerTab> createState() => _LedgerTabState();
+}
+
+class _LedgerTabState extends State<_LedgerTab> {
+  late DateTime _month;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _month = DateTime(now.year, now.month);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final days = DateUtils.getDaysInMonth(_month.year, _month.month);
+    final monthSummary = _summaryForMonth(
+      widget.farm,
+      _month.year,
+      _month.month,
+    );
+    final carryForward = _carryForwardBefore(
+      widget.farm,
+      _month.year,
+      _month.month,
+    );
+    final monthEndCash = carryForward + monthSummary.farmCash;
+    final yearSummary = _summaryForYear(widget.farm, _month.year);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            IconButton.filledTonal(
+              onPressed: () => setState(
+                () => _month = DateTime(_month.year, _month.month - 1),
+              ),
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  _monthName(_month),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            IconButton.filledTonal(
+              onPressed: () => setState(
+                () => _month = DateTime(_month.year, _month.month + 1),
+              ),
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _LedgerSummaryGrid(
+          items: [
+            _LedgerItem('Carry forward', _money(carryForward), Icons.input),
+            _LedgerItem(
+              'Month cash',
+              _money(monthSummary.farmCash),
+              Icons.account_balance_wallet_outlined,
+            ),
+            _LedgerItem(
+              'End cash',
+              _money(monthEndCash),
+              Icons.savings_outlined,
+            ),
+            _LedgerItem(
+              'Milk',
+              '${monthSummary.milk.toStringAsFixed(1)} L',
+              Icons.water_drop_outlined,
+            ),
+            _LedgerItem(
+              'Personal cash',
+              _money(monthSummary.personalCash),
+              Icons.person_outline,
+            ),
+            _LedgerItem(
+              'Loan left',
+              _money(monthSummary.loanOutstanding),
+              Icons.account_balance_outlined,
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: () =>
+              _showCsvSheet(context, widget.farm, _month.year, _month.month),
+          icon: const Icon(Icons.download_outlined),
+          label: const Text('Export month CSV'),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Monthly calendar',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: days,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
+            mainAxisExtent: 54,
+          ),
+          itemBuilder: (context, index) {
+            final day = DateTime(_month.year, _month.month, index + 1);
+            final summary = _summaryForDay(widget.farm, day);
+            final hasProduction = summary.milk > 0;
+            final hasMoney =
+                summary.income > 0 ||
+                summary.expense > 0 ||
+                summary.capital > 0 ||
+                summary.withdrawal > 0;
+            final color = hasProduction
+                ? const Color(0xFFE0F2FE)
+                : hasMoney
+                ? const Color(0xFFEAF7F1)
+                : Colors.white;
+            return InkWell(
+              onTap: () => _showDaySummary(context, day, summary),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFD9E1E3)),
+                ),
+                padding: const EdgeInsets.all(6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${index + 1}',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${summary.milk.toStringAsFixed(0)} L',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 18),
+        Text(
+          '${_month.year} month list',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(12, (index) {
+          final month = DateTime(_month.year, index + 1);
+          final summary = _summaryForMonth(
+            widget.farm,
+            month.year,
+            month.month,
+          );
+          return Card(
+            child: ListTile(
+              title: Text(_monthName(month)),
+              subtitle: Text(
+                'Milk ${summary.milk.toStringAsFixed(1)} L • Income ${_money(summary.income)} • Cost ${_money(summary.expense)}',
+              ),
+              trailing: Text(
+                _money(
+                  _carryForwardBefore(widget.farm, month.year, month.month) +
+                      summary.farmCash,
+                ),
+              ),
+              onTap: () => setState(() => _month = month),
+            ),
+          );
+        }),
+        const SizedBox(height: 14),
+        Card(
+          child: ListTile(
+            leading: const CircleAvatar(
+              child: Icon(Icons.calendar_today_outlined),
+            ),
+            title: Text('${_month.year} yearly overall'),
+            subtitle: Text(
+              'Milk ${yearSummary.milk.toStringAsFixed(1)} L • Farm cash ${_money(yearSummary.farmCash)} • Personal ${_money(yearSummary.personalCash)}',
+            ),
+            trailing: Text(_money(yearSummary.income - yearSummary.expense)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LedgerSummaryGrid extends StatelessWidget {
+  const _LedgerSummaryGrid({required this.items});
+
+  final List<_LedgerItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      itemCount: items.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        mainAxisExtent: 88,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(item.icon, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        item.value,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LedgerItem {
+  const _LedgerItem(this.label, this.value, this.icon);
+
+  final String label;
+  final String value;
+  final IconData icon;
+}
+
+class _LedgerSummary {
+  const _LedgerSummary({
+    this.milk = 0,
+    this.income = 0,
+    this.expense = 0,
+    this.withdrawal = 0,
+    this.capital = 0,
+    this.personalIncome = 0,
+    this.personalExpense = 0,
+    this.loanOutstanding = 0,
+  });
+
+  final double milk;
+  final double income;
+  final double expense;
+  final double withdrawal;
+  final double capital;
+  final double personalIncome;
+  final double personalExpense;
+  final double loanOutstanding;
+
+  double get farmCash => income - expense - withdrawal + capital;
+  double get personalCash => withdrawal + personalIncome - personalExpense;
 }
 
 class _RecordList extends StatelessWidget {
@@ -642,6 +948,72 @@ class _MilkRecordSheetState extends State<_MilkRecordSheet> {
     }
     if (mounted) Navigator.of(context).pop();
   }
+}
+
+Future<void> _showDeleteMilkReasonSheet(
+  BuildContext context,
+  Map<String, dynamic> record,
+) async {
+  final reason = TextEditingController();
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Delete milk record',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${record['production_date'] ?? ''} • ${record['animal_name'] ?? 'Animal'} • ${record['total_milk'] ?? 0} L',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reason,
+              minLines: 2,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                helperText: 'Required so the correction remains recorded.',
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () async {
+                final token = context.read<AuthProvider>().accessToken;
+                final recordId = _recordId(record);
+                final text = reason.text.trim();
+                if (token == null || recordId == null || text.isEmpty) return;
+                await context.read<FarmProvider>().deleteMilkRecord(
+                  token: token,
+                  recordId: recordId,
+                  reason: text,
+                );
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Delete and record reason'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  reason.dispose();
 }
 
 class _TakenMoneySheet extends StatefulWidget {
@@ -1218,6 +1590,256 @@ int? _recordId(Map<String, dynamic>? record) {
   final value = record?['id'];
   if (value is int) return value;
   return int.tryParse('$value');
+}
+
+_LedgerSummary _summaryForDay(FarmProvider farm, DateTime day) {
+  final date = _dateText(day);
+  return _summaryFromRecords(
+    milk: farm.milkRecords.where(
+      (item) => _field(item, 'production_date') == date,
+    ),
+    sales: farm.sales.where((item) => _field(item, 'sale_date') == date),
+    expenses: farm.expenses.where(
+      (item) => _field(item, 'expense_date') == date,
+    ),
+    withdrawals: farm.withdrawals.where(
+      (item) => _field(item, 'withdrawal_date') == date,
+    ),
+    capital: farm.capitalContributions.where(
+      (item) => _field(item, 'contribution_date') == date,
+    ),
+    personal: farm.personalTransactions.where(
+      (item) => _field(item, 'transaction_date') == date,
+    ),
+    loans: farm.loans,
+  );
+}
+
+_LedgerSummary _summaryForMonth(FarmProvider farm, int year, int month) {
+  return _summaryFromRecords(
+    milk: farm.milkRecords.where(
+      (item) => _sameMonth(_field(item, 'production_date'), year, month),
+    ),
+    sales: farm.sales.where(
+      (item) => _sameMonth(_field(item, 'sale_date'), year, month),
+    ),
+    expenses: farm.expenses.where(
+      (item) => _sameMonth(_field(item, 'expense_date'), year, month),
+    ),
+    withdrawals: farm.withdrawals.where(
+      (item) => _sameMonth(_field(item, 'withdrawal_date'), year, month),
+    ),
+    capital: farm.capitalContributions.where(
+      (item) => _sameMonth(_field(item, 'contribution_date'), year, month),
+    ),
+    personal: farm.personalTransactions.where(
+      (item) => _sameMonth(_field(item, 'transaction_date'), year, month),
+    ),
+    loans: farm.loans,
+  );
+}
+
+_LedgerSummary _summaryForYear(FarmProvider farm, int year) {
+  return _summaryFromRecords(
+    milk: farm.milkRecords.where(
+      (item) => _dateOf(_field(item, 'production_date'))?.year == year,
+    ),
+    sales: farm.sales.where(
+      (item) => _dateOf(_field(item, 'sale_date'))?.year == year,
+    ),
+    expenses: farm.expenses.where(
+      (item) => _dateOf(_field(item, 'expense_date'))?.year == year,
+    ),
+    withdrawals: farm.withdrawals.where(
+      (item) => _dateOf(_field(item, 'withdrawal_date'))?.year == year,
+    ),
+    capital: farm.capitalContributions.where(
+      (item) => _dateOf(_field(item, 'contribution_date'))?.year == year,
+    ),
+    personal: farm.personalTransactions.where(
+      (item) => _dateOf(_field(item, 'transaction_date'))?.year == year,
+    ),
+    loans: farm.loans,
+  );
+}
+
+_LedgerSummary _summaryFromRecords({
+  required Iterable<dynamic> milk,
+  required Iterable<dynamic> sales,
+  required Iterable<dynamic> expenses,
+  required Iterable<dynamic> withdrawals,
+  required Iterable<dynamic> capital,
+  required Iterable<dynamic> personal,
+  required Iterable<dynamic> loans,
+}) {
+  final personalIncome = personal.where(
+    (item) => _field(item, 'transaction_type') == 'income',
+  );
+  final personalExpense = personal.where(
+    (item) => _field(item, 'transaction_type') == 'expense',
+  );
+  return _LedgerSummary(
+    milk: _sumRecords(milk, 'total_milk'),
+    income: _sumRecords(sales, 'total_amount'),
+    expense: _sumRecords(expenses, 'amount'),
+    withdrawal: _sumRecords(withdrawals, 'amount'),
+    capital: _sumRecords(capital, 'amount'),
+    personalIncome: _sumRecords(personalIncome, 'amount'),
+    personalExpense: _sumRecords(personalExpense, 'amount'),
+    loanOutstanding: _sumRecords(loans, 'outstanding_amount'),
+  );
+}
+
+double _carryForwardBefore(FarmProvider farm, int year, int month) {
+  final start = DateTime(year, month);
+  final sales = farm.sales.where(
+    (item) => (_dateOf(_field(item, 'sale_date')) ?? start).isBefore(start),
+  );
+  final expenses = farm.expenses.where(
+    (item) => (_dateOf(_field(item, 'expense_date')) ?? start).isBefore(start),
+  );
+  final withdrawals = farm.withdrawals.where(
+    (item) =>
+        (_dateOf(_field(item, 'withdrawal_date')) ?? start).isBefore(start),
+  );
+  final capital = farm.capitalContributions.where(
+    (item) =>
+        (_dateOf(_field(item, 'contribution_date')) ?? start).isBefore(start),
+  );
+  return _sumRecords(sales, 'total_amount') -
+      _sumRecords(expenses, 'amount') -
+      _sumRecords(withdrawals, 'amount') +
+      _sumRecords(capital, 'amount');
+}
+
+void _showDaySummary(
+  BuildContext context,
+  DateTime day,
+  _LedgerSummary summary,
+) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (_) => Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _dateText(day),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          _summaryLine(
+            'Milk production',
+            '${summary.milk.toStringAsFixed(1)} L',
+          ),
+          _summaryLine('Sales income', _money(summary.income)),
+          _summaryLine('Farm cost', _money(summary.expense)),
+          _summaryLine('Taken from farm', _money(summary.withdrawal)),
+          _summaryLine('Investment', _money(summary.capital)),
+          _summaryLine('Personal income', _money(summary.personalIncome)),
+          _summaryLine('Personal expense', _money(summary.personalExpense)),
+          const Divider(),
+          _summaryLine('Farm day cash', _money(summary.farmCash)),
+          _summaryLine('Personal day cash', _money(summary.personalCash)),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _summaryLine(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(child: Text(label)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
+      ],
+    ),
+  );
+}
+
+void _showCsvSheet(
+  BuildContext context,
+  FarmProvider farm,
+  int year,
+  int month,
+) {
+  final csv = _buildMonthCsv(farm, year, month);
+  showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Month CSV'),
+      content: SizedBox(width: 560, child: SelectableText(csv)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
+
+String _buildMonthCsv(FarmProvider farm, int year, int month) {
+  final buffer = StringBuffer(
+    'date,milk_liters,sales_income,farm_cost,taken_from_farm,investment,personal_income,personal_expense,farm_cash,personal_cash\n',
+  );
+  final days = DateUtils.getDaysInMonth(year, month);
+  for (var day = 1; day <= days; day++) {
+    final date = DateTime(year, month, day);
+    final summary = _summaryForDay(farm, date);
+    buffer.writeln(
+      '${_dateText(date)},${summary.milk},${summary.income},${summary.expense},${summary.withdrawal},${summary.capital},${summary.personalIncome},${summary.personalExpense},${summary.farmCash},${summary.personalCash}',
+    );
+  }
+  return buffer.toString();
+}
+
+String _field(dynamic record, String key) {
+  if (record is Map<String, dynamic>) return '${record[key] ?? ''}';
+  return '';
+}
+
+double _sumRecords(Iterable<dynamic> records, String key) {
+  return records.fold<double>(0, (total, item) {
+    if (item is! Map<String, dynamic>) return total;
+    final value = item[key];
+    if (value is num) return total + value.toDouble();
+    return total + (double.tryParse('$value') ?? 0);
+  });
+}
+
+bool _sameMonth(String value, int year, int month) {
+  final date = _dateOf(value);
+  return date != null && date.year == year && date.month == month;
+}
+
+DateTime? _dateOf(String value) => DateTime.tryParse(value);
+
+String _dateText(DateTime date) => date.toIso8601String().split('T').first;
+
+String _monthName(DateTime date) {
+  const names = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  return '${names[date.month - 1]} ${date.year}';
 }
 
 String _money(dynamic value) {

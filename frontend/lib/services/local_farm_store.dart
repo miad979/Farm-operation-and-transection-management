@@ -68,6 +68,7 @@ class LocalFarmStore {
   static const _loansKey = 'offline_loans';
   static const _inventoryKey = 'offline_inventory';
   static const _milkKey = 'offline_milk';
+  static const _milkAuditKey = 'offline_milk_audit';
   static const _milkRatesKey = 'offline_milk_rates';
   static const _idKey = 'offline_next_id';
 
@@ -679,6 +680,12 @@ class LocalFarmStore {
       'quality_grade': 'A',
     };
     if (existingIndex >= 0) {
+      await _addMilkAudit(
+        milk[existingIndex],
+        'updated',
+        morningMilk + eveningMilk,
+        'Same-day milk input updated',
+      );
       milk[existingIndex].addAll(record);
     } else {
       milk.add({'id': await _nextId(), ...record});
@@ -706,6 +713,18 @@ class LocalFarmStore {
         'total_milk': morningMilk + eveningMilk,
       });
     });
+  }
+
+  Future<void> deleteMilkProduction({
+    required int recordId,
+    required String reason,
+  }) async {
+    final milk = await _list(_milkKey);
+    final index = milk.indexWhere((item) => item['id'] == recordId);
+    if (index < 0) return;
+    await _addMilkAudit(milk[index], 'deleted', null, reason);
+    milk.removeAt(index);
+    await _saveList(_milkKey, milk);
   }
 
   Future<void> _applyDailyInventoryUsage() async {
@@ -888,6 +907,27 @@ class LocalFarmStore {
       });
     }
     await _saveList(_milkRatesKey, rates);
+  }
+
+  Future<void> _addMilkAudit(
+    Map<String, dynamic> record,
+    String action,
+    double? newTotal,
+    String reason,
+  ) async {
+    final audits = await _list(_milkAuditKey);
+    audits.add({
+      'id': await _nextId(),
+      'animal': record['animal'],
+      'animal_name': record['animal_name'],
+      'production_date': record['production_date'],
+      'action': action,
+      'old_total_milk': record['total_milk'],
+      'new_total_milk': newTotal,
+      'reason': reason,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+    await _saveList(_milkAuditKey, audits);
   }
 
   bool _isSameMonth(dynamic dateValue, int year, int month) {

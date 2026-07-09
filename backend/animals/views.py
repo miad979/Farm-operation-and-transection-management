@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .milk_totals import milk_total_with_defaults
-from .models import Animal, MilkProduction, MilkProductionRate
+from .models import Animal, MilkProduction, MilkProductionRate, MilkRecordAudit
 from .serializers import AnimalSerializer, MilkProductionSerializer
 
 
@@ -112,7 +112,13 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
         production_date = serializer.validated_data["production_date"]
         morning_milk = serializer.validated_data.get("morning_milk", 0)
         evening_milk = serializer.validated_data.get("evening_milk", 0)
-        milk_record, _created = MilkProduction.objects.update_or_create(
+        existing = MilkProduction.objects.filter(
+            user=request.user,
+            animal=animal,
+            production_date=production_date,
+        ).first()
+        old_total = existing.total_milk if existing else 0
+        milk_record, created = MilkProduction.objects.update_or_create(
             user=request.user,
             animal=animal,
             production_date=production_date,
@@ -124,7 +130,34 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
                 "notes": serializer.validated_data.get("notes", ""),
             },
         )
+        MilkRecordAudit.objects.create(
+            user=request.user,
+            animal=animal,
+            production_date=production_date,
+            action="created" if created else "updated",
+            old_total_milk=old_total,
+            new_total_milk=milk_record.total_milk,
+            reason=request.data.get("reason", "Same-day milk input updated") if not created else request.data.get("reason", ""),
+        )
         return Response(self.get_serializer(milk_record).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="delete-with-reason")
+    def delete_with_reason(self, request, pk=None):
+        record = self.get_object()
+        reason = request.data.get("reason", "").strip()
+        if not reason:
+            return Response({"detail": "Reason is required."}, status=status.HTTP_400_BAD_REQUEST)
+        MilkRecordAudit.objects.create(
+            user=request.user,
+            animal=record.animal,
+            production_date=record.production_date,
+            action="deleted",
+            old_total_milk=record.total_milk,
+            new_total_milk=None,
+            reason=reason,
+        )
+        record.delete()
+        return Response({"detail": "Milk record deleted.", "reason": reason})
 
     @action(detail=False, methods=["get"], url_path=r"daily-report/(?P<report_date>[^/.]+)")
     def daily_report(self, request, report_date=None):

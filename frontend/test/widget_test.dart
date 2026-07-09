@@ -173,4 +173,34 @@ void main() {
       expect(snapshot.dashboard['milk_production']['total_liters'], 6);
     },
   );
+
+  test('Offline milk record can be deleted with reason', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = LocalFarmStore();
+    final today = DateTime.now().toIso8601String().split('T').first;
+
+    await store.createAnimal(
+      animalIdNumber: 'COW-4',
+      name: 'Bela',
+      type: 'Cow',
+      defaultDailyMilk: 10,
+    );
+    var snapshot = await store.loadSnapshot();
+    await store.createMilkProduction(
+      animalId: snapshot.animals.first.id,
+      productionDate: today,
+      morningMilk: 8,
+      eveningMilk: 0,
+    );
+    snapshot = await store.loadSnapshot();
+
+    await store.deleteMilkProduction(
+      recordId: snapshot.milkRecords.first['id'] as int,
+      reason: 'Wrong cow selected',
+    );
+
+    snapshot = await store.loadSnapshot();
+    expect(snapshot.milkRecords.length, 0);
+    expect(snapshot.dashboard['milk_production']['total_liters'], 10);
+  });
 }

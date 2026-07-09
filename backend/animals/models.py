@@ -91,3 +91,23 @@ class MilkProductionRate(models.Model):
 
     def __str__(self):
         return f"{self.animal.name} - {self.daily_milk} L from {self.effective_date}"
+
+
+class MilkRecordAudit(models.Model):
+    ACTION_CHOICES = (
+        ("created", "created"),
+        ("updated", "updated"),
+        ("deleted", "deleted"),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name="milk_audits")
+    production_date = models.DateField()
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    old_total_milk = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    new_total_milk = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

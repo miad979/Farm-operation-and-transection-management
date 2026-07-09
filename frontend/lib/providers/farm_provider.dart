@@ -749,6 +749,27 @@ class FarmProvider extends ChangeNotifier {
     await loadAll(token);
   }
 
+  Future<void> deleteMilkRecord({
+    required String token,
+    required int recordId,
+    required String reason,
+  }) async {
+    if (_isOffline(token)) {
+      await _localStore.deleteMilkProduction(
+        recordId: recordId,
+        reason: reason,
+      );
+      await loadAll(token);
+      return;
+    }
+    await _apiService.deleteMilkProduction(
+      token: token,
+      recordId: recordId,
+      reason: reason,
+    );
+    await loadAll(token);
+  }
+
   String _today() => DateTime.now().toIso8601String().split('T').first;
 
   bool _isOffline(String token) => LocalFarmStore.isOfflineToken(token);

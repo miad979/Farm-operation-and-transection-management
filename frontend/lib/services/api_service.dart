@@ -74,6 +74,20 @@ class ApiService {
     return _decode(response) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> _deleteReason(
+    String token,
+    String path,
+    String reason,
+  ) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}$path'),
+      headers: _jsonHeaders(token),
+      body: jsonEncode({'reason': reason}),
+    );
+    _ensureSuccess(response, 'Delete failed');
+    return _decode(response) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> register({
     required String username,
     required String email,
@@ -548,5 +562,17 @@ class ApiService {
       'evening_milk': eveningMilk.toStringAsFixed(2),
       'quality_grade': qualityGrade,
     });
+  }
+
+  Future<void> deleteMilkProduction({
+    required String token,
+    required int recordId,
+    required String reason,
+  }) async {
+    await _deleteReason(
+      token,
+      '/milk-production/$recordId/delete-with-reason/',
+      reason,
+    );
   }
 }
