@@ -158,3 +158,48 @@ class AnimalsApiTests(APITestCase):
         )
 
         self.assertEqual(float(milk_total_with_defaults(self.user, today)), 9.0)
+
+    def test_same_day_milk_input_updates_existing_record(self):
+        animal_response = self.client.post(
+            "/api/v1/animals/",
+            {
+                "animal_id_number": "AN005",
+                "name": "Tara",
+                "type": "Cow",
+                "default_daily_milk": "10.00",
+            },
+            format="json",
+        )
+        today = self.client.get("/api/v1/dashboard/today/").data["date"]
+
+        first_response = self.client.post(
+            "/api/v1/milk-production/",
+            {
+                "animal": animal_response.data["id"],
+                "production_date": today,
+                "morning_milk": "8.00",
+                "evening_milk": "0.00",
+                "quality_grade": "A",
+            },
+            format="json",
+        )
+        second_response = self.client.post(
+            "/api/v1/milk-production/",
+            {
+                "animal": animal_response.data["id"],
+                "production_date": today,
+                "morning_milk": "6.00",
+                "evening_milk": "0.00",
+                "quality_grade": "A",
+            },
+            format="json",
+        )
+        records_response = self.client.get("/api/v1/milk-production/")
+        dashboard_response = self.client.get("/api/v1/dashboard/today/")
+        records = records_response.data.get("results", records_response.data)
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(first_response.data["id"], second_response.data["id"])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(float(dashboard_response.data["milk_production"]["total_liters"]), 6.0)

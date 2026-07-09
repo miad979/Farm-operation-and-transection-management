@@ -15,6 +15,7 @@ class MilkProductionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MilkProduction
         exclude = ("user",)
+        validators = []
 
     def validate_animal(self, value):
         request = self.context.get("request")

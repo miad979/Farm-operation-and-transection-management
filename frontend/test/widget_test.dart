@@ -138,4 +138,39 @@ void main() {
       expect(snapshot.dashboard['milk_production']['total_liters'], 0);
     },
   );
+
+  test(
+    'Offline same-day milk input updates instead of double counting',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = LocalFarmStore();
+      final today = DateTime.now().toIso8601String().split('T').first;
+
+      await store.createAnimal(
+        animalIdNumber: 'COW-3',
+        name: 'Tara',
+        type: 'Cow',
+        defaultDailyMilk: 10,
+      );
+      var snapshot = await store.loadSnapshot();
+      final animalId = snapshot.animals.first.id;
+
+      await store.createMilkProduction(
+        animalId: animalId,
+        productionDate: today,
+        morningMilk: 8,
+        eveningMilk: 0,
+      );
+      await store.createMilkProduction(
+        animalId: animalId,
+        productionDate: today,
+        morningMilk: 6,
+        eveningMilk: 0,
+      );
+
+      snapshot = await store.loadSnapshot();
+      expect(snapshot.milkRecords.length, 1);
+      expect(snapshot.dashboard['milk_production']['total_liters'], 6);
+    },
+  );
 }

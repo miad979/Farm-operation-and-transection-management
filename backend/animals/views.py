@@ -105,8 +105,26 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return MilkProduction.objects.filter(user=self.request.user).select_related("animal")
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        animal = serializer.validated_data["animal"]
+        production_date = serializer.validated_data["production_date"]
+        morning_milk = serializer.validated_data.get("morning_milk", 0)
+        evening_milk = serializer.validated_data.get("evening_milk", 0)
+        milk_record, _created = MilkProduction.objects.update_or_create(
+            user=request.user,
+            animal=animal,
+            production_date=production_date,
+            defaults={
+                "morning_milk": morning_milk,
+                "evening_milk": evening_milk,
+                "total_milk": morning_milk + evening_milk,
+                "quality_grade": serializer.validated_data.get("quality_grade", ""),
+                "notes": serializer.validated_data.get("notes", ""),
+            },
+        )
+        return Response(self.get_serializer(milk_record).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"], url_path=r"daily-report/(?P<report_date>[^/.]+)")
     def daily_report(self, request, report_date=None):

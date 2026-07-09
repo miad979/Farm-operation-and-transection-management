@@ -664,8 +664,12 @@ class LocalFarmStore {
       (item) => item?['id'] == animalId,
       orElse: () => null,
     );
-    milk.add({
-      'id': await _nextId(),
+    final existingIndex = milk.indexWhere(
+      (item) =>
+          item['animal'] == animalId &&
+          item['production_date'] == productionDate,
+    );
+    final record = {
       'animal': animalId,
       'animal_name': animal?['name'] ?? 'Animal',
       'production_date': productionDate,
@@ -673,7 +677,12 @@ class LocalFarmStore {
       'evening_milk': eveningMilk,
       'total_milk': morningMilk + eveningMilk,
       'quality_grade': 'A',
-    });
+    };
+    if (existingIndex >= 0) {
+      milk[existingIndex].addAll(record);
+    } else {
+      milk.add({'id': await _nextId(), ...record});
+    }
     await _saveList(_milkKey, milk);
   }
 
