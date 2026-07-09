@@ -18,6 +18,18 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
+    if (kIsWeb && Uri.base.queryParameters['offline'] == '1') {
+      _accessToken = LocalFarmStore.offlineToken;
+      await prefs.setString('access_token', LocalFarmStore.offlineToken);
+      notifyListeners();
+      return;
+    }
+    if (kIsWeb && Uri.base.queryParameters['reset'] == '1') {
+      _accessToken = null;
+      await prefs.remove('access_token');
+      notifyListeners();
+      return;
+    }
     _accessToken = prefs.getString('access_token');
     notifyListeners();
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,20 +18,31 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
-        _startupError = details.exceptionAsString();
+        if (!_appStarted) {
+          _startupError = details.exceptionAsString();
+        }
       };
 
       final apiService = ApiService();
       final localFarmStore = LocalFarmStore();
+      _appStarted = true;
       runApp(FarmApp(apiService: apiService, localFarmStore: localFarmStore));
     },
     (error, stack) {
+      if (_appStarted) {
+        debugPrint('Unhandled app error: $error');
+        if (kDebugMode) {
+          debugPrintStack(stackTrace: stack);
+        }
+        return;
+      }
       runApp(StartupErrorApp(message: error.toString()));
     },
   );
 }
 
 String? _startupError;
+bool _appStarted = false;
 
 class StartupErrorApp extends StatelessWidget {
   const StartupErrorApp({super.key, required this.message});
