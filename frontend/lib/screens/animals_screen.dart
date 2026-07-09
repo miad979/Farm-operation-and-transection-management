@@ -568,7 +568,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
                 decoration: const InputDecoration(
                   labelText: 'Normal daily milk (L)',
                   helperText:
-                      'Automatically counted each day until you enter actual milk.',
+                      'Change this when the cow normal production changes.',
                 ),
               ),
               const SizedBox(height: 12),

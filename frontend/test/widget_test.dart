@@ -86,4 +86,56 @@ void main() {
     snapshot = await store.loadSnapshot();
     expect(snapshot.dashboard['milk_production']['total_liters'], 7);
   });
+
+  test(
+    'Offline cow profile milk change updates automatic production',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = LocalFarmStore();
+
+      await store.createAnimal(
+        animalIdNumber: 'COW-2',
+        name: 'Jui',
+        type: 'Cow',
+        defaultDailyMilk: 8,
+      );
+      var snapshot = await store.loadSnapshot();
+      final animal = snapshot.animals.first;
+
+      await store.updateAnimal(
+        animalId: animal.id,
+        animalIdNumber: animal.animalIdNumber,
+        name: animal.name,
+        type: animal.type,
+        breed: animal.breed ?? '',
+        gender: animal.gender ?? '',
+        healthStatus: animal.healthStatus,
+        defaultDailyMilk: 11,
+        vaccinated: animal.vaccinated,
+        pregnancyStatus: animal.pregnancyStatus,
+        notes: animal.notes ?? '',
+      );
+
+      snapshot = await store.loadSnapshot();
+      expect(snapshot.dashboard['milk_production']['total_liters'], 11);
+
+      final updated = snapshot.animals.first;
+      await store.updateAnimal(
+        animalId: updated.id,
+        animalIdNumber: updated.animalIdNumber,
+        name: updated.name,
+        type: updated.type,
+        breed: updated.breed ?? '',
+        gender: updated.gender ?? '',
+        healthStatus: updated.healthStatus,
+        defaultDailyMilk: 0,
+        vaccinated: updated.vaccinated,
+        pregnancyStatus: updated.pregnancyStatus,
+        notes: updated.notes ?? '',
+      );
+
+      snapshot = await store.loadSnapshot();
+      expect(snapshot.dashboard['milk_production']['total_liters'], 0);
+    },
+  );
 }

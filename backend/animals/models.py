@@ -75,3 +75,19 @@ class MilkProduction(models.Model):
 
     def __str__(self):
         return f"{self.animal.name} - {self.production_date}"
+
+
+class MilkProductionRate(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name="milk_rates")
+    daily_milk = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    effective_date = models.DateField()
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-effective_date", "-created_at"]
+        unique_together = ("animal", "effective_date")
+
+    def __str__(self):
+        return f"{self.animal.name} - {self.daily_milk} L from {self.effective_date}"

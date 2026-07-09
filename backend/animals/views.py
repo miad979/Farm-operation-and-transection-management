@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .milk_totals import milk_total_with_defaults
-from .models import Animal, MilkProduction
+from .models import Animal, MilkProduction, MilkProductionRate
 from .serializers import AnimalSerializer, MilkProductionSerializer
 
 
@@ -32,7 +32,25 @@ class AnimalViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        animal = serializer.save(user=self.request.user)
+        self._set_milk_rate_if_needed(animal)
+
+    def perform_update(self, serializer):
+        old_daily_milk = serializer.instance.default_daily_milk
+        animal = serializer.save()
+        if animal.default_daily_milk != old_daily_milk:
+            self._set_milk_rate_if_needed(animal)
+
+    def _set_milk_rate_if_needed(self, animal):
+        MilkProductionRate.objects.update_or_create(
+            animal=animal,
+            effective_date=timezone.localdate(),
+            defaults={
+                "user": self.request.user,
+                "daily_milk": animal.default_daily_milk,
+                "notes": "Normal daily milk set from cow profile",
+            },
+        )
 
     @action(detail=True, methods=["post"])
     def health(self, request, pk=None):

@@ -1,6 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from .milk_totals import milk_total_with_defaults
 
 User = get_user_model()
 
@@ -89,3 +92,69 @@ class AnimalsApiTests(APITestCase):
             float(updated_dashboard.data["milk_production"]["total_liters"]),
             7.0,
         )
+
+    def test_changing_cow_profile_milk_keeps_previous_rate_history(self):
+        today = timezone.localdate()
+        animal_response = self.client.post(
+            "/api/v1/animals/",
+            {
+                "animal_id_number": "AN004",
+                "name": "Jui",
+                "type": "Cow",
+                "default_daily_milk": "8.00",
+            },
+            format="json",
+        )
+        animal_id = animal_response.data["id"]
+
+        self.client.patch(
+            f"/api/v1/animals/{animal_id}/",
+            {
+                "animal_id_number": "AN004",
+                "name": "Jui",
+                "type": "Cow",
+                "breed": "",
+                "gender": "",
+                "health_status": "Healthy",
+                "default_daily_milk": "11.00",
+                "vaccinated": False,
+                "pregnancy_status": "Not Pregnant",
+                "notes": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(float(milk_total_with_defaults(self.user, today)), 11.0)
+
+        self.client.post(
+            "/api/v1/milk-production/",
+            {
+                "animal": animal_id,
+                "production_date": today.isoformat(),
+                "morning_milk": "9.00",
+                "evening_milk": "0.00",
+                "quality_grade": "A",
+            },
+            format="json",
+        )
+
+        self.assertEqual(float(milk_total_with_defaults(self.user, today)), 9.0)
+
+        self.client.patch(
+            f"/api/v1/animals/{animal_id}/",
+            {
+                "animal_id_number": "AN004",
+                "name": "Jui",
+                "type": "Cow",
+                "breed": "",
+                "gender": "",
+                "health_status": "Healthy",
+                "default_daily_milk": "0.00",
+                "vaccinated": False,
+                "pregnancy_status": "Not Pregnant",
+                "notes": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(float(milk_total_with_defaults(self.user, today)), 9.0)

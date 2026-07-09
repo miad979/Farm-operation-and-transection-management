@@ -68,6 +68,7 @@ class LocalFarmStore {
   static const _loansKey = 'offline_loans';
   static const _inventoryKey = 'offline_inventory';
   static const _milkKey = 'offline_milk';
+  static const _milkRatesKey = 'offline_milk_rates';
   static const _idKey = 'offline_next_id';
 
   static bool isOfflineToken(String? token) => token == offlineToken;
@@ -83,6 +84,7 @@ class LocalFarmStore {
     final loans = await _list(_loansKey);
     final inventory = await _list(_inventoryKey);
     final milk = await _list(_milkKey);
+    final milkRates = await _list(_milkRatesKey);
 
     final activeAnimals = animals
         .where((item) => (item['is_active'] as bool?) ?? true)
@@ -141,12 +143,14 @@ class LocalFarmStore {
     final monthlyMilk = _milkTotalWithDefaults(
       activeAnimals,
       monthMilk.toList(),
+      milkRates,
       DateTime(year, month),
       DateTime(year, month, now.day),
     );
     final todayMilkLiters = _milkTotalWithDefaults(
       activeAnimals,
       todayMilk.toList(),
+      milkRates,
       DateTime(now.year, now.month, now.day),
       DateTime(now.year, now.month, now.day),
     );
@@ -310,9 +314,12 @@ class LocalFarmStore {
       'vaccinated': false,
       'pregnancy_status': 'Not Pregnant',
       'is_active': true,
+      'created_on': _today(),
       'notes': notes ?? '',
     });
+    final animalId = animals.last['id'] as int;
     await _saveList(_animalsKey, animals);
+    await _setMilkRateIfNeeded(animalId, defaultDailyMilk);
   }
 
   Future<void> updateAnimal({
@@ -327,8 +334,10 @@ class LocalFarmStore {
     required bool vaccinated,
     required String pregnancyStatus,
     required String notes,
-  }) {
-    return _updateById(_animalsKey, animalId, (item) {
+  }) async {
+    var oldDailyMilk = 0.0;
+    await _updateById(_animalsKey, animalId, (item) {
+      oldDailyMilk = _num(item['default_daily_milk']);
       item.addAll({
         'animal_id_number': animalIdNumber,
         'name': name,
@@ -342,6 +351,9 @@ class LocalFarmStore {
         'notes': notes,
       });
     });
+    if (oldDailyMilk != defaultDailyMilk) {
+      await _setMilkRateIfNeeded(animalId, defaultDailyMilk);
+    }
   }
 
   Future<void> updateAnimalActive({
@@ -846,6 +858,29 @@ class LocalFarmStore {
     await _saveList(key, items);
   }
 
+  Future<void> _setMilkRateIfNeeded(int animalId, double dailyMilk) async {
+    final rates = await _list(_milkRatesKey);
+    final today = _today();
+    var updated = false;
+    for (final rate in rates) {
+      if (rate['animal'] == animalId && rate['effective_date'] == today) {
+        rate['daily_milk'] = dailyMilk;
+        updated = true;
+        break;
+      }
+    }
+    if (!updated) {
+      rates.add({
+        'id': await _nextId(),
+        'animal': animalId,
+        'daily_milk': dailyMilk,
+        'effective_date': today,
+        'notes': 'Normal daily milk set from cow profile',
+      });
+    }
+    await _saveList(_milkRatesKey, rates);
+  }
+
   bool _isSameMonth(dynamic dateValue, int year, int month) {
     final date = DateTime.tryParse('$dateValue');
     return date != null && date.year == year && date.month == month;
@@ -858,6 +893,7 @@ class LocalFarmStore {
   double _milkTotalWithDefaults(
     List<Map<String, dynamic>> animals,
     List<Map<String, dynamic>> records,
+    List<Map<String, dynamic>> milkRates,
     DateTime startDate,
     DateTime endDate,
   ) {
@@ -871,7 +907,7 @@ class LocalFarmStore {
     while (!day.isAfter(lastDay)) {
       final dateText = day.toIso8601String().split('T').first;
       for (final animal in animals) {
-        final dailyMilk = _num(animal['default_daily_milk']);
+        final dailyMilk = _dailyMilkForDay(animal, milkRates, dateText);
         if (dailyMilk <= 0) continue;
         if (!manualPairs.contains('${animal['id']}|$dateText')) {
           defaultTotal += dailyMilk;
@@ -880,6 +916,34 @@ class LocalFarmStore {
       day = day.add(const Duration(days: 1));
     }
     return manualTotal + defaultTotal;
+  }
+
+  double _dailyMilkForDay(
+    Map<String, dynamic> animal,
+    List<Map<String, dynamic>> milkRates,
+    String dateText,
+  ) {
+    final animalRates =
+        milkRates.where((rate) => rate['animal'] == animal['id']).toList()
+          ..sort(
+            (a, b) =>
+                '${a['effective_date']}'.compareTo('${b['effective_date']}'),
+          );
+    Map<String, dynamic>? current;
+    for (final rate in animalRates) {
+      if ('${rate['effective_date']}'.compareTo(dateText) <= 0) {
+        current = rate;
+      } else {
+        break;
+      }
+    }
+    if (current != null) return _num(current['daily_milk']);
+
+    final createdOn = '${animal['created_on'] ?? dateText}';
+    if (createdOn.compareTo(dateText) <= 0) {
+      return _num(animal['default_daily_milk']);
+    }
+    return 0;
   }
 
   double _num(dynamic value) {
