@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dairyops/main.dart';
 import 'package:dairyops/services/api_service.dart';
+import 'package:dairyops/services/local_farm_store.dart';
 
 void main() {
   testWidgets('Shows login screen when token is absent', (
@@ -10,7 +11,9 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
 
-    await tester.pumpWidget(FarmApp(apiService: ApiService()));
+    await tester.pumpWidget(
+      FarmApp(apiService: ApiService(), localFarmStore: LocalFarmStore()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('DairyOps'), findsWidgets);

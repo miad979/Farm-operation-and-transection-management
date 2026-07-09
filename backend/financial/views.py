@@ -1,9 +1,9 @@
-from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import F
 from django.db.models import Sum
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -218,7 +218,7 @@ class InventoryViewSet(UserOwnedModelViewSet):
     serializer_class = InventorySerializer
 
     def _apply_daily_usage(self):
-        today = date.today()
+        today = timezone.localdate()
         for item in Inventory.objects.filter(
             user=self.request.user,
             auto_deduct_enabled=True,
@@ -253,8 +253,8 @@ class InventoryViewSet(UserOwnedModelViewSet):
         item = self.get_object()
         amount = Decimal(str(request.data.get("quantity", "0")))
         item.quantity = (item.quantity or Decimal("0")) + amount
-        item.last_updated = date.today()
-        item.last_auto_deducted = date.today()
+        item.last_updated = timezone.localdate()
+        item.last_auto_deducted = timezone.localdate()
         item.save(update_fields=["quantity", "last_updated", "last_auto_deducted", "updated_at"])
         return Response(InventorySerializer(item).data)
 
@@ -264,8 +264,8 @@ class InventoryViewSet(UserOwnedModelViewSet):
         item = self.get_object()
         amount = Decimal(str(request.data.get("quantity", "0")))
         item.quantity = max(Decimal("0"), (item.quantity or Decimal("0")) - amount)
-        item.last_updated = date.today()
-        item.last_auto_deducted = date.today()
+        item.last_updated = timezone.localdate()
+        item.last_auto_deducted = timezone.localdate()
         item.save(update_fields=["quantity", "last_updated", "last_auto_deducted", "updated_at"])
         return Response(InventorySerializer(item).data)
 

@@ -15,6 +15,19 @@ A cross-platform dairy farm management system built with Flutter, Django REST Fr
 - View dashboard summaries, history, reports, and Bangla-friendly UI labels
 - Build for Android, web, and other Flutter-supported platforms
 
+## Offline-First Mobile Use
+
+The Flutter app includes an offline phone mode. A farmer can tap **Use offline on this phone** from the first screen and start recording farm data without creating an online account or depending on internet.
+
+In offline mode:
+
+- Data is saved locally on the phone
+- Animals, milk, sales, expenses, personal money, stock, loans, and reports work without internet
+- Feed or stock can still auto-reduce by daily use
+- Cloud login and backend sync can be added later for backup or multi-device use
+
+For public Play Store use, offline mode can work immediately on the device. Online backup/sync still requires a hosted HTTPS backend.
+
 ## Tech Stack
 
 - Frontend: Flutter, Dart, Material 3

@@ -1,7 +1,8 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,7 +12,7 @@ from financial.models import Inventory, Loan
 
 
 def apply_daily_inventory_usage(user):
-    today = date.today()
+    today = timezone.localdate()
     for item in Inventory.objects.filter(
         user=user,
         auto_deduct_enabled=True,
@@ -36,7 +37,7 @@ class NotificationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
+        today = timezone.localdate()
         soon = today + timedelta(days=30)
         alerts = []
         apply_daily_inventory_usage(request.user)

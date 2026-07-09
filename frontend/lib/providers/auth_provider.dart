@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
+import '../services/local_farm_store.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider(this._apiService);
@@ -12,6 +13,7 @@ class AuthProvider extends ChangeNotifier {
 
   String? get accessToken => _accessToken;
   bool get isAuthenticated => _accessToken != null && _accessToken!.isNotEmpty;
+  bool get isOfflineMode => LocalFarmStore.isOfflineToken(_accessToken);
   bool get isLoading => _isLoading;
 
   Future<void> loadToken() async {
@@ -68,6 +70,13 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> startOfflineMode() async {
+    _accessToken = LocalFarmStore.offlineToken;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('access_token', LocalFarmStore.offlineToken);
+    notifyListeners();
   }
 
   Future<void> logout() async {

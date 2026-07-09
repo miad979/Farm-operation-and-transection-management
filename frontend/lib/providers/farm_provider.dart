@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 
 import '../models/animal_model.dart';
 import '../services/api_service.dart';
+import '../services/local_farm_store.dart';
 
 class FarmProvider extends ChangeNotifier {
-  FarmProvider(this._apiService);
+  FarmProvider(this._apiService, this._localStore);
 
   final ApiService _apiService;
+  final LocalFarmStore _localStore;
   bool _isLoading = false;
   String? _error;
   bool _sessionExpired = false;
@@ -75,6 +77,34 @@ class FarmProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (_isOffline(token)) {
+        final snapshot = await _localStore.loadSnapshot();
+        _animals = snapshot.animals;
+        _dashboard = snapshot.dashboard;
+        _monthly = snapshot.monthly;
+        _cashFlow = snapshot.cashFlow;
+        _animalStats = snapshot.animalStats;
+        _salesReport = snapshot.salesReport;
+        _expenseReport = snapshot.expenseReport;
+        _loanSummary = snapshot.loanSummary;
+        _capitalSummary = snapshot.capitalSummary;
+        _personalMoneySummary = snapshot.personalMoneySummary;
+        _monthlyReport = snapshot.monthlyReport;
+        _financialReport = snapshot.financialReport;
+        _insights = snapshot.insights;
+        _lowStock = snapshot.lowStock;
+        _sales = snapshot.sales;
+        _expenses = snapshot.expenses;
+        _withdrawals = snapshot.withdrawals;
+        _capitalContributions = snapshot.capitalContributions;
+        _personalTransactions = snapshot.personalTransactions;
+        _loans = snapshot.loans;
+        _notifications = snapshot.notifications;
+        _inventory = snapshot.inventory;
+        _milkRecords = snapshot.milkRecords;
+        return;
+      }
+
       final results = await Future.wait<dynamic>([
         _apiService.getAnimals(token),
         _apiService.getTodayDashboard(token),
@@ -149,6 +179,19 @@ class FarmProvider extends ChangeNotifier {
     String? healthStatus,
     String? notes,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createAnimal(
+        animalIdNumber: animalIdNumber,
+        name: name,
+        type: type,
+        breed: breed,
+        gender: gender,
+        healthStatus: healthStatus,
+        notes: notes,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createAnimal(
       token: token,
       animalIdNumber: animalIdNumber,
@@ -175,6 +218,22 @@ class FarmProvider extends ChangeNotifier {
     required String pregnancyStatus,
     required String notes,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateAnimal(
+        animalId: animalId,
+        animalIdNumber: animalIdNumber,
+        name: name,
+        type: type,
+        breed: breed,
+        gender: gender,
+        healthStatus: healthStatus,
+        vaccinated: vaccinated,
+        pregnancyStatus: pregnancyStatus,
+        notes: notes,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateAnimal(
       token: token,
       animalId: animalId,
@@ -198,6 +257,17 @@ class FarmProvider extends ChangeNotifier {
     required double amount,
     int? referenceAnimalId,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createSale(
+        saleType: saleType,
+        saleDate: _today(),
+        description: description,
+        totalAmount: amount,
+        referenceAnimalId: referenceAnimalId,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createSale(
       token: token,
       saleType: saleType,
@@ -216,6 +286,16 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateSale(
+        saleId: saleId,
+        saleType: saleType,
+        description: description,
+        totalAmount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateSale(
       token: token,
       saleId: saleId,
@@ -232,6 +312,18 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createSale(
+        saleType: 'cattle',
+        saleDate: _today(),
+        description: description,
+        totalAmount: amount,
+        referenceAnimalId: animalId,
+      );
+      await _localStore.updateAnimalActive(animalId: animalId, isActive: false);
+      await loadAll(token);
+      return;
+    }
     await _apiService.createSale(
       token: token,
       saleType: 'cattle',
@@ -254,6 +346,16 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createExpense(
+        category: category,
+        expenseDate: _today(),
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createExpense(
       token: token,
       category: category,
@@ -271,6 +373,16 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateExpense(
+        expenseId: expenseId,
+        category: category,
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateExpense(
       token: token,
       expenseId: expenseId,
@@ -287,6 +399,16 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createFamilyWithdrawal(
+        withdrawalDate: _today(),
+        reason: reason,
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createFamilyWithdrawal(
       token: token,
       withdrawalDate: _today(),
@@ -304,6 +426,16 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateFamilyWithdrawal(
+        withdrawalId: withdrawalId,
+        reason: reason,
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateFamilyWithdrawal(
       token: token,
       withdrawalId: withdrawalId,
@@ -321,6 +453,17 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createPersonalTransaction(
+        transactionDate: _today(),
+        transactionType: transactionType,
+        category: category,
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createPersonalTransaction(
       token: token,
       transactionDate: _today(),
@@ -340,6 +483,18 @@ class FarmProvider extends ChangeNotifier {
     required int tenureMonths,
     required double monthlyInstallment,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createLoan(
+        loanDate: _today(),
+        loanSource: loanSource,
+        loanAmount: loanAmount,
+        interestRate: interestRate,
+        tenureMonths: tenureMonths,
+        monthlyInstallment: monthlyInstallment,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createLoan(
       token: token,
       loanDate: _today(),
@@ -358,6 +513,15 @@ class FarmProvider extends ChangeNotifier {
     required double principalAmount,
     required double interestAmount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createLoanPayment(
+        loanId: loanId,
+        principalAmount: principalAmount,
+        interestAmount: interestAmount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createLoanPayment(
       token: token,
       loanId: loanId,
@@ -375,6 +539,17 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createCapitalContribution(
+        contributionDate: _today(),
+        sourceType: sourceType,
+        contributorName: contributorName,
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createCapitalContribution(
       token: token,
       contributionDate: _today(),
@@ -394,6 +569,17 @@ class FarmProvider extends ChangeNotifier {
     required String description,
     required double amount,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateCapitalContribution(
+        contributionId: contributionId,
+        sourceType: sourceType,
+        contributorName: contributorName,
+        description: description,
+        amount: amount,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateCapitalContribution(
       token: token,
       contributionId: contributionId,
@@ -415,6 +601,19 @@ class FarmProvider extends ChangeNotifier {
     double dailyUsageQuantity = 0,
     bool autoDeductEnabled = false,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createInventoryItem(
+        itemType: itemType,
+        itemName: itemName,
+        quantity: quantity,
+        unit: unit,
+        reorderLevel: reorderLevel,
+        dailyUsageQuantity: dailyUsageQuantity,
+        autoDeductEnabled: autoDeductEnabled,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createInventoryItem(
       token: token,
       itemType: itemType,
@@ -439,6 +638,20 @@ class FarmProvider extends ChangeNotifier {
     double dailyUsageQuantity = 0,
     bool autoDeductEnabled = false,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateInventoryItem(
+        itemId: itemId,
+        itemType: itemType,
+        itemName: itemName,
+        quantity: quantity,
+        unit: unit,
+        reorderLevel: reorderLevel,
+        dailyUsageQuantity: dailyUsageQuantity,
+        autoDeductEnabled: autoDeductEnabled,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateInventoryItem(
       token: token,
       itemId: itemId,
@@ -459,6 +672,15 @@ class FarmProvider extends ChangeNotifier {
     required double quantity,
     required bool stockIn,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.moveInventoryStock(
+        itemId: itemId,
+        quantity: quantity,
+        stockIn: stockIn,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.moveInventoryStock(
       token: token,
       itemId: itemId,
@@ -474,6 +696,16 @@ class FarmProvider extends ChangeNotifier {
     required double morningMilk,
     required double eveningMilk,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.createMilkProduction(
+        animalId: animalId,
+        productionDate: _today(),
+        morningMilk: morningMilk,
+        eveningMilk: eveningMilk,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.createMilkProduction(
       token: token,
       animalId: animalId,
@@ -491,6 +723,16 @@ class FarmProvider extends ChangeNotifier {
     required double morningMilk,
     required double eveningMilk,
   }) async {
+    if (_isOffline(token)) {
+      await _localStore.updateMilkProduction(
+        recordId: recordId,
+        animalId: animalId,
+        morningMilk: morningMilk,
+        eveningMilk: eveningMilk,
+      );
+      await loadAll(token);
+      return;
+    }
     await _apiService.updateMilkProduction(
       token: token,
       recordId: recordId,
@@ -502,4 +744,6 @@ class FarmProvider extends ChangeNotifier {
   }
 
   String _today() => DateTime.now().toIso8601String().split('T').first;
+
+  bool _isOffline(String token) => LocalFarmStore.isOfflineToken(token);
 }

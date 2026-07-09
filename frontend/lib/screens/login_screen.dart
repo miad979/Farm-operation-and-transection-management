@@ -62,6 +62,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _startOfflineMode() async {
+    setState(() {
+      _error = null;
+    });
+    try {
+      await context.read<AuthProvider>().startOfflineMode();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    }
+  }
+
   void _showTermsSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -109,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                     }),
                     onShowTerms: _showTermsSheet,
+                    onStartOfflineMode: _startOfflineMode,
                     onToggleMode: () => setState(() {
                       _isRegistering = !_isRegistering;
                       if (!_isRegistering) {
@@ -237,6 +251,7 @@ class _LoginCard extends StatelessWidget {
     required this.onSubmit,
     required this.onAcceptedTermsChanged,
     required this.onShowTerms,
+    required this.onStartOfflineMode,
     required this.onToggleMode,
   });
 
@@ -251,6 +266,7 @@ class _LoginCard extends StatelessWidget {
   final VoidCallback onSubmit;
   final ValueChanged<bool> onAcceptedTermsChanged;
   final VoidCallback onShowTerms;
+  final VoidCallback onStartOfflineMode;
   final VoidCallback onToggleMode;
 
   @override
@@ -375,6 +391,20 @@ class _LoginCard extends StatelessWidget {
                     ? 'Already have an account? Sign in'
                     : 'New farm? Create an account',
               ),
+            ),
+            const SizedBox(height: 6),
+            OutlinedButton.icon(
+              onPressed: isLoading ? null : onStartOfflineMode,
+              icon: const Icon(Icons.phone_android_outlined),
+              label: const Text('Use offline on this phone'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No internet or account needed. Records stay on this device.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF526166)),
             ),
           ],
         ),

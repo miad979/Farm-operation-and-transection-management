@@ -9,6 +9,7 @@ import 'providers/language_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/api_service.dart';
+import 'services/local_farm_store.dart';
 
 void main() {
   runZonedGuarded(
@@ -20,7 +21,8 @@ void main() {
       };
 
       final apiService = ApiService();
-      runApp(FarmApp(apiService: apiService));
+      final localFarmStore = LocalFarmStore();
+      runApp(FarmApp(apiService: apiService, localFarmStore: localFarmStore));
     },
     (error, stack) {
       runApp(StartupErrorApp(message: error.toString()));
@@ -56,9 +58,14 @@ class StartupErrorApp extends StatelessWidget {
 }
 
 class FarmApp extends StatelessWidget {
-  const FarmApp({super.key, required this.apiService});
+  const FarmApp({
+    super.key,
+    required this.apiService,
+    required this.localFarmStore,
+  });
 
   final ApiService apiService;
+  final LocalFarmStore localFarmStore;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +75,7 @@ class FarmApp extends StatelessWidget {
           create: (_) => AuthProvider(apiService)..loadToken(),
         ),
         ChangeNotifierProvider<FarmProvider>(
-          create: (_) => FarmProvider(apiService),
+          create: (_) => FarmProvider(apiService, localFarmStore),
         ),
         ChangeNotifierProvider<LanguageProvider>(
           create: (_) => LanguageProvider(),

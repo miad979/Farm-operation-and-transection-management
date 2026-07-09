@@ -103,7 +103,7 @@ class FinancialApiTests(APITestCase):
             reorder_level="20.00",
             daily_usage_quantity="5.00",
             auto_deduct_enabled=True,
-            last_auto_deducted=timezone.now().date() - timezone.timedelta(days=3),
+            last_auto_deducted=timezone.localdate() - timezone.timedelta(days=3),
         )
 
         response = self.client.get("/api/v1/inventory/")

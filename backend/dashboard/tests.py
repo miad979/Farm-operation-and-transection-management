@@ -34,7 +34,7 @@ class DashboardApiTests(APITestCase):
         self.assertIn("available_cash", response.data)
 
     def test_notifications_include_farm_warnings_and_auto_feed_use(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         Animal.objects.create(
             user=self.user,
             animal_id_number="ALERT-001",

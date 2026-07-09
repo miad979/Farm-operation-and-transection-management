@@ -25,6 +25,16 @@ The default local API URL is:
 http://127.0.0.1:8000/api/v1
 ```
 
+## Offline Phone Mode
+
+The app can also run without a backend. On the first screen, choose:
+
+```text
+Use offline on this phone
+```
+
+This stores farm records on the device and keeps daily workflows available without internet. Use the online login only when a backend server is available for cloud data.
+
 For a physical Android device during development, pass your computer LAN IP:
 
 ```powershell
