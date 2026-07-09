@@ -1,0 +1,45 @@
+# Python / Django
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+backend/.env
+backend/db.sqlite3
+backend/media/
+
+# Logs and local test artifacts
+*.log
+*.err.log
+backend/server.log
+backend/server.err.log
+frontend/chrome-*.log
+frontend/chrome-dom*.html
+frontend/web-check*.png
+frontend/web-static*.log
+
+# Flutter / Dart
+frontend/.dart_tool/
+frontend/.flutter-plugins-dependencies
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/android/build/
+frontend/coverage/
+frontend/**/Flutter/.last_build_id
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Android signing secrets
+frontend/android/key.properties
+frontend/android/upload-keystore.jks
+*.jks
+*.keystore
+
+# OS files
+.DS_Store
+Thumbs.db

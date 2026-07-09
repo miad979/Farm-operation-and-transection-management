@@ -1,0 +1,43 @@
+### Register
+POST http://127.0.0.1:8000/api/v1/auth/register/
+Content-Type: application/json
+
+{
+  "username": "farmer1",
+  "email": "farmer1@example.com",
+  "password": "strongpass123",
+  "farm_name": "Lakshmi Dairy Farm",
+  "farm_location": "Dhaka",
+  "owner_name": "Hasan"
+}
+
+### Login
+POST http://127.0.0.1:8000/api/v1/auth/login/
+Content-Type: application/json
+
+{
+  "username": "farmer1",
+  "password": "strongpass123"
+}
+
+### Set this token from login response
+@token = YOUR_ACCESS_TOKEN_HERE
+
+### Create animal
+POST http://127.0.0.1:8000/api/v1/animals/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "animal_id_number": "LF001",
+  "name": "Lakshmi",
+  "type": "Cow",
+  "breed": "Holstein",
+  "gender": "Female",
+  "purchase_price": 45000,
+  "current_value": 48000
+}
+
+### Dashboard today
+GET http://127.0.0.1:8000/api/v1/dashboard/today/
+Authorization: Bearer {{token}}
