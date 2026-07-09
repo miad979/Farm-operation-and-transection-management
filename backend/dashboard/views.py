@@ -1,7 +1,7 @@
-from datetime import date
 from decimal import Decimal
 
 from django.db.models import Avg, Sum
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,7 +14,7 @@ class TodaySummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
+        today = timezone.localdate()
         milk_qs = MilkProduction.objects.filter(user=request.user, production_date=today)
         sales_qs = Sale.objects.filter(user=request.user, sale_date=today)
         expenses_qs = Expense.objects.filter(user=request.user, expense_date=today)
@@ -70,7 +70,7 @@ class MonthlySummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
+        today = timezone.localdate()
         year = int(request.query_params.get("year", today.year))
         month = int(request.query_params.get("month", today.month))
 
@@ -144,7 +144,7 @@ class InsightsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
+        today = timezone.localdate()
         current_month_milk = (
             MilkProduction.objects.filter(
                 user=request.user,

@@ -20,4 +20,44 @@ void main() {
     expect(find.text('Sign in to DairyOps'), findsOneWidget);
     expect(find.text('Login'), findsOneWidget);
   });
+
+  test('Offline store matches personal money transfer rules', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = LocalFarmStore();
+    final today = DateTime.now().toIso8601String().split('T').first;
+
+    await store.createFamilyWithdrawal(
+      withdrawalDate: today,
+      reason: 'household',
+      description: 'Owner draw',
+      amount: 3000,
+    );
+    await store.createPersonalTransaction(
+      transactionDate: today,
+      transactionType: 'income',
+      category: 'other',
+      description: 'Other income',
+      amount: 500,
+    );
+    await store.createPersonalTransaction(
+      transactionDate: today,
+      transactionType: 'expense',
+      category: 'food',
+      description: 'Family shopping',
+      amount: 800,
+    );
+
+    final snapshot = await store.loadSnapshot();
+
+    expect(snapshot.personalMoneySummary['farm_to_pocket'], 3000);
+    expect(snapshot.personalMoneySummary['personal_income'], 500);
+    expect(snapshot.personalMoneySummary['personal_expenses'], 800);
+    expect(snapshot.personalMoneySummary['personal_balance'], 2700);
+    expect(
+      snapshot.personalTransactions.firstWhere(
+        (item) => item['linked_withdrawal'] != null,
+      )['transaction_type'],
+      'farm_transfer',
+    );
+  });
 }

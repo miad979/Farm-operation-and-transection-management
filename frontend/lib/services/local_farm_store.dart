@@ -130,7 +130,14 @@ class LocalFarmStore {
       monthPersonal.where((item) => item['transaction_type'] == 'expense'),
       'amount',
     );
-    final personalBalance = personalIncome - personalExpenses;
+    final personalFarmTransfers = _sum(
+      monthPersonal.where(
+        (item) => item['transaction_type'] == 'farm_transfer',
+      ),
+      'amount',
+    );
+    final personalBalance =
+        personalIncome + personalFarmTransfers - personalExpenses;
     final monthlyMilk = _sum(monthMilk, 'total_milk');
     final todayMilkLiters = _sum(todayMilk, 'total_milk');
     final dailyAverageMilk = now.day == 0 ? 0 : monthlyMilk / now.day;
@@ -215,7 +222,7 @@ class LocalFarmStore {
       'active_loans': loans.where((item) => item['status'] == 'active').length,
     };
     final personalSummary = <String, dynamic>{
-      'farm_to_pocket': farmToPocket,
+      'farm_to_pocket': personalFarmTransfers,
       'personal_income': personalIncome,
       'personal_expenses': personalExpenses,
       'personal_balance': personalBalance,
@@ -425,8 +432,8 @@ class LocalFarmStore {
       'id': await _nextId(),
       'linked_withdrawal': withdrawalId,
       'transaction_date': withdrawalDate,
-      'transaction_type': 'income',
-      'category': 'farm_to_pocket',
+      'transaction_type': 'farm_transfer',
+      'category': 'farm_transfer',
       'description': description.isEmpty
           ? 'Money taken from farm'
           : description,

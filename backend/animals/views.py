@@ -1,6 +1,7 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from django.db.models import Avg, Sum
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -44,7 +45,7 @@ class AnimalViewSet(viewsets.ModelViewSet):
     def vaccinate(self, request, pk=None):
         animal = self.get_object()
         animal.vaccinated = True
-        animal.vaccination_date = request.data.get("vaccination_date", str(date.today()))
+        animal.vaccination_date = request.data.get("vaccination_date", str(timezone.localdate()))
         animal.last_vaccination_type = request.data.get(
             "last_vaccination_type", animal.last_vaccination_type
         )
@@ -129,7 +130,7 @@ class MilkProductionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="best-producer")
     def best_producer(self, request):
-        today = date.today()
+        today = timezone.localdate()
         aggregated = (
             self.get_queryset()
             .filter(production_date__year=today.year, production_date__month=today.month)

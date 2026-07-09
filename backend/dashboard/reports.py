@@ -1,7 +1,8 @@
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from django.db.models import Sum
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -74,7 +75,7 @@ class DailyReportView(APIView):
 
     def get(self, request):
         raw_date = request.query_params.get("date")
-        report_date = date.today()
+        report_date = timezone.localdate()
         if raw_date:
             report_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
         return Response({"date": report_date, **_report_for_period(request.user, start_date=report_date)})
@@ -84,7 +85,7 @@ class MonthlyReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        today = date.today()
+        today = timezone.localdate()
         year = int(request.query_params.get("year", today.year))
         month = int(request.query_params.get("month", today.month))
         return Response({"year": year, "month": month, **_report_for_period(request.user, year=year, month=month)})
@@ -94,7 +95,7 @@ class YearlyReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        year = int(request.query_params.get("year", date.today().year))
+        year = int(request.query_params.get("year", timezone.localdate().year))
         return Response({"year": year, **_report_for_period(request.user, year=year)})
 
 
