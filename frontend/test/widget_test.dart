@@ -61,6 +61,40 @@ void main() {
     );
   });
 
+  test('Offline data reloads after app restart', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final firstSession = LocalFarmStore();
+    final today = DateTime.now().toIso8601String().split('T').first;
+
+    await firstSession.createAnimal(
+      animalIdNumber: 'COW-SAVE',
+      name: 'Sathi',
+      type: 'Cow',
+      defaultDailyMilk: 9,
+    );
+    await firstSession.createSale(
+      saleType: 'milk',
+      saleDate: today,
+      description: 'Morning milk sale',
+      totalAmount: 1200,
+    );
+    await firstSession.createExpense(
+      category: 'feed',
+      expenseDate: today,
+      description: 'Feed purchase',
+      amount: 450,
+    );
+
+    final reopenedSession = LocalFarmStore();
+    final snapshot = await reopenedSession.loadSnapshot();
+
+    expect(snapshot.animals.single.name, 'Sathi');
+    expect(snapshot.sales.single['total_amount'], 1200);
+    expect(snapshot.expenses.single['amount'], 450);
+    expect(snapshot.dashboard['milk_production']['total_liters'], 9);
+    expect(snapshot.dashboard['profit'], 750);
+  });
+
   test('Offline store counts normal daily milk and manual override', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = LocalFarmStore();
