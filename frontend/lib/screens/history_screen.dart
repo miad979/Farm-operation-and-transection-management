@@ -629,6 +629,9 @@ class _SaleSheet extends StatefulWidget {
 class _SaleSheetState extends State<_SaleSheet> {
   late final TextEditingController _description;
   late final TextEditingController _amount;
+  late final TextEditingController _customerName;
+  late final TextEditingController _customerPhone;
+  late final TextEditingController _paidAmount;
   late String _saleType;
 
   @override
@@ -642,12 +645,24 @@ class _SaleSheetState extends State<_SaleSheet> {
     _amount = TextEditingController(
       text: record == null ? '' : '${record['total_amount'] ?? ''}',
     );
+    _customerName = TextEditingController(
+      text: '${record?['customer_name'] ?? ''}',
+    );
+    _customerPhone = TextEditingController(
+      text: '${record?['customer_phone'] ?? ''}',
+    );
+    _paidAmount = TextEditingController(
+      text: record == null ? '' : '${record['paid_amount'] ?? ''}',
+    );
   }
 
   @override
   void dispose() {
     _description.dispose();
     _amount.dispose();
+    _customerName.dispose();
+    _customerPhone.dispose();
+    _paidAmount.dispose();
     super.dispose();
   }
 
@@ -672,6 +687,17 @@ class _SaleSheetState extends State<_SaleSheet> {
         ),
         const SizedBox(height: 10),
         TextField(
+          controller: _customerName,
+          decoration: const InputDecoration(labelText: 'Customer name'),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _customerPhone,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(labelText: 'Customer phone'),
+        ),
+        const SizedBox(height: 10),
+        TextField(
           controller: _description,
           decoration: InputDecoration(
             labelText: lang.text('Description', 'বিবরণ'),
@@ -682,6 +708,15 @@ class _SaleSheetState extends State<_SaleSheet> {
           controller: _amount,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: lang.text('Amount', 'টাকা')),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _paidAmount,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Paid amount',
+            helperText: 'Due is bill amount minus paid amount.',
+          ),
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
@@ -697,6 +732,7 @@ class _SaleSheetState extends State<_SaleSheet> {
     final token = context.read<AuthProvider>().accessToken;
     final amount = double.tryParse(_amount.text.trim());
     if (token == null || amount == null || amount <= 0) return;
+    final paidAmount = double.tryParse(_paidAmount.text.trim()) ?? amount;
     final provider = context.read<FarmProvider>();
     final id = _recordId(widget.record);
     if (id == null) {
@@ -705,6 +741,9 @@ class _SaleSheetState extends State<_SaleSheet> {
         saleType: _saleType,
         description: _description.text.trim(),
         amount: amount,
+        customerName: _customerName.text.trim(),
+        customerPhone: _customerPhone.text.trim(),
+        paidAmount: paidAmount,
       );
     } else {
       await provider.updateSale(
@@ -713,6 +752,9 @@ class _SaleSheetState extends State<_SaleSheet> {
         saleType: _saleType,
         description: _description.text.trim(),
         amount: amount,
+        customerName: _customerName.text.trim(),
+        customerPhone: _customerPhone.text.trim(),
+        paidAmount: paidAmount,
       );
     }
     if (mounted) Navigator.of(context).pop();

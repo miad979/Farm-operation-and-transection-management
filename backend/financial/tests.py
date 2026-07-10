@@ -26,13 +26,19 @@ class FinancialApiTests(APITestCase):
             "unit": "liter",
             "price_per_unit": "60.00",
             "total_amount": "1200.00",
+            "paid_amount": "700.00",
             "payment_method": "cash",
         }
         create_response = self.client.post("/api/v1/sales/", sale_payload, format="json")
         report_response = self.client.get("/api/v1/sales/report/")
+        dues_response = self.client.get("/api/v1/sales/dues/")
 
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(report_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(dues_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(str(create_response.data["due_amount"]), "500.00")
+        self.assertEqual(str(report_response.data["total_due"]), "500")
+        self.assertEqual(str(dues_response.data[0]["due_amount"]), "500.00")
         self.assertIn("total_sales", report_response.data)
 
     def test_loan_payment_flow(self):

@@ -71,6 +71,7 @@ class LocalFarmStore {
   static const _milkAuditKey = 'offline_milk_audit';
   static const _milkRatesKey = 'offline_milk_rates';
   static const _idKey = 'offline_next_id';
+  static const _backupVersion = 1;
 
   static bool isOfflineToken(String? token) => token == offlineToken;
 
@@ -371,15 +372,23 @@ class LocalFarmStore {
     required String saleDate,
     required String description,
     required double totalAmount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
     int? referenceAnimalId,
   }) async {
+    final paid = paidAmount ?? totalAmount;
     final sales = await _list(_salesKey);
     final sale = <String, dynamic>{
       'id': await _nextId(),
       'sale_type': saleType,
       'sale_date': saleDate,
+      'customer_name': customerName,
+      'customer_phone': customerPhone,
       'description': description,
       'total_amount': totalAmount,
+      'paid_amount': paid,
+      'due_amount': (totalAmount - paid).clamp(0, double.infinity),
       'payment_method': 'cash',
     };
     if (referenceAnimalId != null) {
@@ -394,14 +403,79 @@ class LocalFarmStore {
     required String saleType,
     required String description,
     required double totalAmount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
   }) {
     return _updateById(_salesKey, saleId, (item) {
+      final paid = paidAmount ?? totalAmount;
       item.addAll({
         'sale_type': saleType,
+        'customer_name': customerName,
+        'customer_phone': customerPhone,
         'description': description,
         'total_amount': totalAmount,
+        'paid_amount': paid,
+        'due_amount': (totalAmount - paid).clamp(0, double.infinity),
       });
     });
+  }
+
+  Future<String> exportBackup() async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = <String, dynamic>{
+      'app': 'DairyOps',
+      'version': _backupVersion,
+      'created_at': DateTime.now().toIso8601String(),
+      'data': {
+        _animalsKey: await _list(_animalsKey),
+        _salesKey: await _list(_salesKey),
+        _expensesKey: await _list(_expensesKey),
+        _withdrawalsKey: await _list(_withdrawalsKey),
+        _capitalKey: await _list(_capitalKey),
+        _personalKey: await _list(_personalKey),
+        _loansKey: await _list(_loansKey),
+        _inventoryKey: await _list(_inventoryKey),
+        _milkKey: await _list(_milkKey),
+        _milkAuditKey: await _list(_milkAuditKey),
+        _milkRatesKey: await _list(_milkRatesKey),
+        _idKey: prefs.getInt(_idKey) ?? 1,
+      },
+    };
+    return const JsonEncoder.withIndent('  ').convert(payload);
+  }
+
+  Future<void> importBackup(String backupText) async {
+    final decoded = jsonDecode(backupText) as Map<String, dynamic>;
+    if (decoded['app'] != 'DairyOps' || decoded['data'] is! Map) {
+      throw FormatException('This is not a DairyOps backup.');
+    }
+    final data = Map<String, dynamic>.from(decoded['data'] as Map);
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in [
+      _animalsKey,
+      _salesKey,
+      _expensesKey,
+      _withdrawalsKey,
+      _capitalKey,
+      _personalKey,
+      _loansKey,
+      _inventoryKey,
+      _milkKey,
+      _milkAuditKey,
+      _milkRatesKey,
+    ]) {
+      final raw = data[key];
+      if (raw == null) {
+        await prefs.remove(key);
+      } else if (raw is List) {
+        await prefs.setString(key, jsonEncode(raw));
+      } else {
+        throw FormatException('Backup field $key is damaged.');
+      }
+    }
+    final nextId = data[_idKey];
+    await prefs.setInt(_idKey, nextId is int ? nextId : 1);
   }
 
   Future<void> createExpense({

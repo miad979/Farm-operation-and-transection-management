@@ -261,6 +261,9 @@ class FarmProvider extends ChangeNotifier {
     required String saleType,
     required String description,
     required double amount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
     int? referenceAnimalId,
   }) async {
     if (_isOffline(token)) {
@@ -269,6 +272,9 @@ class FarmProvider extends ChangeNotifier {
         saleDate: _today(),
         description: description,
         totalAmount: amount,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        paidAmount: paidAmount,
         referenceAnimalId: referenceAnimalId,
       );
       await loadAll(token);
@@ -280,6 +286,9 @@ class FarmProvider extends ChangeNotifier {
       saleDate: _today(),
       description: description,
       totalAmount: amount,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      paidAmount: paidAmount,
       referenceAnimalId: referenceAnimalId,
     );
     await loadAll(token);
@@ -291,6 +300,9 @@ class FarmProvider extends ChangeNotifier {
     required String saleType,
     required String description,
     required double amount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
   }) async {
     if (_isOffline(token)) {
       await _localStore.updateSale(
@@ -298,6 +310,9 @@ class FarmProvider extends ChangeNotifier {
         saleType: saleType,
         description: description,
         totalAmount: amount,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        paidAmount: paidAmount,
       );
       await loadAll(token);
       return;
@@ -308,6 +323,9 @@ class FarmProvider extends ChangeNotifier {
       saleType: saleType,
       description: description,
       totalAmount: amount,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      paidAmount: paidAmount,
     );
     await loadAll(token);
   }
@@ -317,6 +335,9 @@ class FarmProvider extends ChangeNotifier {
     required int animalId,
     required String description,
     required double amount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
   }) async {
     if (_isOffline(token)) {
       await _localStore.createSale(
@@ -324,6 +345,9 @@ class FarmProvider extends ChangeNotifier {
         saleDate: _today(),
         description: description,
         totalAmount: amount,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        paidAmount: paidAmount,
         referenceAnimalId: animalId,
       );
       await _localStore.updateAnimalActive(animalId: animalId, isActive: false);
@@ -336,6 +360,9 @@ class FarmProvider extends ChangeNotifier {
       saleDate: _today(),
       description: description,
       totalAmount: amount,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      paidAmount: paidAmount,
       referenceAnimalId: animalId,
     );
     await _apiService.updateAnimalActive(
@@ -773,4 +800,22 @@ class FarmProvider extends ChangeNotifier {
   String _today() => DateTime.now().toIso8601String().split('T').first;
 
   bool _isOffline(String token) => LocalFarmStore.isOfflineToken(token);
+
+  Future<String> exportOfflineBackup(String token) async {
+    if (!_isOffline(token)) {
+      throw Exception('Backup is available for offline phone records.');
+    }
+    return _localStore.exportBackup();
+  }
+
+  Future<void> importOfflineBackup({
+    required String token,
+    required String backupText,
+  }) async {
+    if (!_isOffline(token)) {
+      throw Exception('Restore is available for offline phone records.');
+    }
+    await _localStore.importBackup(backupText);
+    await loadAll(token);
+  }
 }

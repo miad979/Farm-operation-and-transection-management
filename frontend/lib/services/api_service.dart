@@ -279,14 +279,20 @@ class ApiService {
     required String saleDate,
     required String description,
     required double totalAmount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
     String paymentMethod = 'cash',
     int? referenceAnimalId,
   }) async {
     final body = <String, dynamic>{
       'sale_type': saleType,
       'sale_date': saleDate,
+      'customer_name': customerName,
+      'customer_phone': customerPhone,
       'description': description,
       'total_amount': totalAmount.toStringAsFixed(2),
+      'paid_amount': (paidAmount ?? totalAmount).toStringAsFixed(2),
       'payment_method': paymentMethod,
     };
     if (referenceAnimalId != null) {
@@ -301,11 +307,17 @@ class ApiService {
     required String saleType,
     required String description,
     required double totalAmount,
+    String customerName = '',
+    String customerPhone = '',
+    double? paidAmount,
   }) async {
     await _patchMap(token, '/sales/$saleId/', {
       'sale_type': saleType,
+      'customer_name': customerName,
+      'customer_phone': customerPhone,
       'description': description,
       'total_amount': totalAmount.toStringAsFixed(2),
+      'paid_amount': (paidAmount ?? totalAmount).toStringAsFixed(2),
     });
   }
 

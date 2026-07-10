@@ -22,6 +22,7 @@ class Sale(models.Model):
     unit = models.CharField(max_length=20, blank=True)
     price_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES, blank=True)
     reference_animal = models.ForeignKey(
         Animal, on_delete=models.SET_NULL, null=True, blank=True, related_name="sale_records"

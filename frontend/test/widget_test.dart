@@ -95,6 +95,36 @@ void main() {
     expect(snapshot.dashboard['profit'], 750);
   });
 
+  test('Offline sale tracks customer due and backup restore', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final store = LocalFarmStore();
+    final today = DateTime.now().toIso8601String().split('T').first;
+
+    await store.createSale(
+      saleType: 'milk',
+      saleDate: today,
+      description: 'Customer milk',
+      totalAmount: 1000,
+      customerName: 'Rahim',
+      customerPhone: '01700000000',
+      paidAmount: 650,
+    );
+
+    var snapshot = await store.loadSnapshot();
+    expect(snapshot.sales.single['customer_name'], 'Rahim');
+    expect(snapshot.sales.single['paid_amount'], 650);
+    expect(snapshot.sales.single['due_amount'], 350);
+
+    final backup = await store.exportBackup();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final restoredStore = LocalFarmStore();
+    await restoredStore.importBackup(backup);
+    snapshot = await restoredStore.loadSnapshot();
+
+    expect(snapshot.sales.single['customer_phone'], '01700000000');
+    expect(snapshot.sales.single['due_amount'], 350);
+  });
+
   test('Offline store counts normal daily milk and manual override', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final store = LocalFarmStore();

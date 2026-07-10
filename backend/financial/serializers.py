@@ -13,9 +13,14 @@ from .models import (
 
 
 class SaleSerializer(serializers.ModelSerializer):
+    due_amount = serializers.SerializerMethodField()
+
     class Meta:
         model = Sale
         exclude = ("user",)
+
+    def get_due_amount(self, obj):
+        return max(obj.total_amount - obj.paid_amount, 0)
 
 
 class ExpenseSerializer(serializers.ModelSerializer):

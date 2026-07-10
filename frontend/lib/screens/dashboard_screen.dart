@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
@@ -90,6 +91,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           isLoading: farm.isLoading,
                           onRefresh: _load,
                           onAddRecord: () => _showQuickRecord(context),
+                          onBackup: () => _showBackupSheet(context),
                         ),
                         if (farm.error != null) ...[
                           const SizedBox(height: 12),
@@ -280,11 +282,13 @@ class _Header extends StatelessWidget {
     required this.isLoading,
     required this.onRefresh,
     required this.onAddRecord,
+    required this.onBackup,
   });
 
   final bool isLoading;
   final VoidCallback onRefresh;
   final VoidCallback onAddRecord;
+  final VoidCallback onBackup;
 
   @override
   Widget build(BuildContext context) {
@@ -339,6 +343,12 @@ class _Header extends StatelessWidget {
             icon: const Icon(Icons.translate),
             label: Text(lang.isBangla ? 'EN' : 'বাংলা'),
           ),
+        const SizedBox(width: 10),
+        IconButton.outlined(
+          tooltip: 'Backup',
+          onPressed: onBackup,
+          icon: const Icon(Icons.backup_outlined),
+        ),
         const SizedBox(width: 10),
         if (compactActions)
           IconButton.filled(
@@ -510,6 +520,8 @@ class _DashboardBody extends StatelessWidget {
           children: [
             _ControlPanel(onAddRecord: () => _showQuickRecord(context)),
             const SizedBox(height: 12),
+            _CustomerDuePanel(farm: farm),
+            const SizedBox(height: 12),
             _HealthPanel(farm: farm),
             const SizedBox(height: 12),
             _InsightsPanel(farm: farm),
@@ -521,6 +533,8 @@ class _DashboardBody extends StatelessWidget {
           return Column(
             children: [
               _ControlPanel(onAddRecord: () => _showQuickRecord(context)),
+              const SizedBox(height: 12),
+              _CustomerDuePanel(farm: farm),
               const SizedBox(height: 12),
               _MonthlyCalculationPanel(farm: farm),
               const SizedBox(height: 12),
@@ -687,6 +701,148 @@ class _ControlTile extends StatelessWidget {
           child: content,
         ),
       ),
+    );
+  }
+}
+
+class _CustomerDuePanel extends StatelessWidget {
+  const _CustomerDuePanel({required this.farm});
+
+  final FarmProvider farm;
+
+  @override
+  Widget build(BuildContext context) {
+    final dues = <String, _CustomerDue>{};
+    for (final sale in farm.sales) {
+      final total = valueNum(sale['total_amount']);
+      final paid = sale.containsKey('paid_amount')
+          ? valueNum(sale['paid_amount'])
+          : total;
+      final due = sale.containsKey('due_amount')
+          ? valueNum(sale['due_amount'])
+          : math.max(total - paid, 0);
+      if (due <= 0) continue;
+
+      final rawName = '${sale['customer_name'] ?? ''}'.trim();
+      final name = rawName.isEmpty ? 'Customer due' : rawName;
+      final phone = '${sale['customer_phone'] ?? ''}'.trim();
+      final row = dues.putIfAbsent(name, () => _CustomerDue(name, phone));
+      row.amount += due;
+      row.bills += 1;
+      if (row.phone.isEmpty && phone.isNotEmpty) row.phone = phone;
+    }
+
+    final rows = dues.values.toList()
+      ..sort((a, b) => b.amount.compareTo(a.amount));
+    final totalDue = rows.fold<num>(0, (sum, row) => sum + row.amount);
+
+    return _Panel(
+      title: 'Customer dues',
+      action: Text(
+        _money(totalDue),
+        style: const TextStyle(fontWeight: FontWeight.w900),
+      ),
+      child: rows.isEmpty
+          ? const _EmptyPanelMessage(
+              icon: Icons.verified_outlined,
+              message: 'No unpaid customer bills',
+            )
+          : Column(
+              children: [
+                for (final row in rows.take(4)) ...[
+                  _DueRow(row: row),
+                  if (row != rows.take(4).last) const Divider(height: 14),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _CustomerDue {
+  _CustomerDue(this.name, this.phone);
+
+  final String name;
+  String phone;
+  num amount = 0;
+  int bills = 0;
+}
+
+class _DueRow extends StatelessWidget {
+  const _DueRow({required this.row});
+
+  final _CustomerDue row;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.person_pin_circle_outlined,
+            color: Color(0xFFB45309),
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                row.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                row.phone.isEmpty
+                    ? '${row.bills} unpaid bill${row.bills == 1 ? '' : 's'}'
+                    : row.phone,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFF526166)),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          _money(row.amount),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyPanelMessage extends StatelessWidget {
+  const _EmptyPanelMessage({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF147D64)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(
+              color: Color(0xFF526166),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1315,6 +1471,10 @@ num readNum(Map<String, dynamic> source, List<String> path) {
     if (value is! Map<String, dynamic>) return 0;
     value = value[key];
   }
+  return valueNum(value);
+}
+
+num valueNum(dynamic value) {
   if (value is num) return value;
   return num.tryParse('$value') ?? 0;
 }
@@ -1328,6 +1488,132 @@ Future<void> _showQuickRecord(BuildContext context) async {
     showDragHandle: true,
     builder: (_) => const _QuickRecordSheet(),
   );
+}
+
+Future<void> _showBackupSheet(BuildContext context) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => const _BackupSheet(),
+  );
+}
+
+class _BackupSheet extends StatefulWidget {
+  const _BackupSheet();
+
+  @override
+  State<_BackupSheet> createState() => _BackupSheetState();
+}
+
+class _BackupSheetState extends State<_BackupSheet> {
+  final _backupText = TextEditingController();
+  String? _message;
+
+  @override
+  void dispose() {
+    _backupText.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final offline = auth.isOfflineMode;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Backup & restore',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                offline
+                    ? 'Copy your offline records and save them somewhere safe. Paste a backup here to restore on this phone.'
+                    : 'Online records are saved on your backend. Phone backup is available when using offline mode.',
+              ),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: offline ? _copyBackup : null,
+                icon: const Icon(Icons.copy_all_outlined),
+                label: const Text('Copy backup'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _backupText,
+                minLines: 4,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: 'Paste backup text here',
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: offline ? _pasteFromClipboard : null,
+                icon: const Icon(Icons.content_paste_outlined),
+                label: const Text('Paste from clipboard'),
+              ),
+              const SizedBox(height: 10),
+              FilledButton.tonalIcon(
+                onPressed: offline ? _restoreBackup : null,
+                icon: const Icon(Icons.restore_outlined),
+                label: const Text('Restore backup'),
+              ),
+              if (_message != null) ...[
+                const SizedBox(height: 10),
+                Text(_message!),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copyBackup() async {
+    final token = context.read<AuthProvider>().accessToken;
+    if (token == null) return;
+    final backup = await context.read<FarmProvider>().exportOfflineBackup(
+      token,
+    );
+    await Clipboard.setData(ClipboardData(text: backup));
+    setState(
+      () => _message =
+          'Backup copied. Save it in Drive, Notes, or another safe place.',
+    );
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    _backupText.text = data?.text ?? '';
+  }
+
+  Future<void> _restoreBackup() async {
+    final token = context.read<AuthProvider>().accessToken;
+    if (token == null || _backupText.text.trim().isEmpty) return;
+    try {
+      await context.read<FarmProvider>().importOfflineBackup(
+        token: token,
+        backupText: _backupText.text.trim(),
+      );
+      if (mounted) setState(() => _message = 'Backup restored successfully.');
+    } catch (e) {
+      if (mounted) setState(() => _message = 'Restore failed: $e');
+    }
+  }
 }
 
 class _QuickRecordSheet extends StatefulWidget {
@@ -1477,6 +1763,9 @@ class _RecordTypeTile extends StatelessWidget {
 class _QuickRecordSheetState extends State<_QuickRecordSheet> {
   final _description = TextEditingController();
   final _amount = TextEditingController();
+  final _customerName = TextEditingController();
+  final _customerPhone = TextEditingController();
+  final _paidAmount = TextEditingController();
   final _morningMilk = TextEditingController();
   final _eveningMilk = TextEditingController();
   final _itemName = TextEditingController();
@@ -1497,6 +1786,9 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
   void dispose() {
     _description.dispose();
     _amount.dispose();
+    _customerName.dispose();
+    _customerPhone.dispose();
+    _paidAmount.dispose();
     _morningMilk.dispose();
     _eveningMilk.dispose();
     _itemName.dispose();
@@ -1645,7 +1937,27 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
         _saleType == 'cattle' ? 'Buyer / sale note' : 'Description',
       ),
       const SizedBox(height: 12),
-      _amountField(_saleType == 'cattle' ? 'Cow sale amount' : 'Sale amount'),
+      TextField(
+        controller: _customerName,
+        decoration: const InputDecoration(labelText: 'Customer name'),
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _customerPhone,
+        keyboardType: TextInputType.phone,
+        decoration: const InputDecoration(labelText: 'Customer phone'),
+      ),
+      const SizedBox(height: 12),
+      _amountField(_saleType == 'cattle' ? 'Cow sale amount' : 'Bill amount'),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _paidAmount,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          labelText: 'Paid now',
+          helperText: 'Leave empty when the full bill is paid.',
+        ),
+      ),
     ];
   }
 
@@ -1847,6 +2159,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       final amount = double.tryParse(_amount.text.trim());
       if (amount == null) return;
       if (_type == 'sale') {
+        final paidAmount = double.tryParse(_paidAmount.text.trim()) ?? amount;
         if (_saleType == 'cattle') {
           final activeAnimals = provider.animals
               .where((animal) => animal.isActive)
@@ -1862,6 +2175,9 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
                 ? 'Cattle sale'
                 : _description.text.trim(),
             amount: amount,
+            customerName: _customerName.text.trim(),
+            customerPhone: _customerPhone.text.trim(),
+            paidAmount: paidAmount,
           );
         } else {
           await provider.addSale(
@@ -1869,6 +2185,9 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
             saleType: _saleType,
             description: _description.text.trim(),
             amount: amount,
+            customerName: _customerName.text.trim(),
+            customerPhone: _customerPhone.text.trim(),
+            paidAmount: paidAmount,
           );
         }
       } else if (_type == 'personal') {

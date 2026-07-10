@@ -61,10 +61,32 @@ class SaleViewSet(UserOwnedModelViewSet):
     @action(detail=False, methods=["get"])
     def report(self, request):
         total = self.get_queryset().aggregate(total=Sum("total_amount"))["total"] or Decimal("0")
+        paid = self.get_queryset().aggregate(total=Sum("paid_amount"))["total"] or Decimal("0")
         by_type = (
             self.get_queryset().values("sale_type").annotate(total=Sum("total_amount")).order_by("sale_type")
         )
-        return Response({"total_sales": total, "by_type": list(by_type)})
+        return Response({"total_sales": total, "paid_sales": paid, "total_due": total - paid, "by_type": list(by_type)})
+
+    @action(detail=False, methods=["get"])
+    def dues(self, request):
+        rows = []
+        for sale in self.get_queryset().exclude(customer_name=""):
+            due = max((sale.total_amount or Decimal("0")) - (sale.paid_amount or Decimal("0")), Decimal("0"))
+            if due <= 0:
+                continue
+            rows.append(
+                {
+                    "customer_name": sale.customer_name,
+                    "customer_phone": sale.customer_phone,
+                    "sale_date": sale.sale_date,
+                    "sale_type": sale.sale_type,
+                    "description": sale.description,
+                    "total_amount": sale.total_amount,
+                    "paid_amount": sale.paid_amount,
+                    "due_amount": due,
+                }
+            )
+        return Response(rows)
 
 
 class ExpenseViewSet(UserOwnedModelViewSet):
