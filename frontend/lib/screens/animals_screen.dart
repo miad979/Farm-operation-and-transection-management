@@ -303,6 +303,7 @@ class _AnimalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final needsAttention =
         animal.healthStatus != 'Healthy' || !animal.vaccinated;
+    final canProduceMilk = _canProduceMilk(animal);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -372,9 +373,9 @@ class _AnimalCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onMilkRecord,
+                    onPressed: canProduceMilk ? onMilkRecord : null,
                     icon: const Icon(Icons.water_drop_outlined),
-                    label: const Text('Milk'),
+                    label: Text(canProduceMilk ? 'Milk' : 'No milk'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -511,6 +512,10 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 560;
+    final canProduceMilk = _canProduceMilkFrom(type: _type, gender: _gender);
+    if (!canProduceMilk && _pregnancy != 'Not Pregnant') {
+      _pregnancy = 'Not Pregnant';
+    }
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -543,18 +548,28 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
               const SizedBox(height: 12),
               _fieldPair(
                 compact: compact,
-                first: _select('Type', _type, [
-                  'Cow',
-                  'Ox',
-                  'Buffalo',
-                  'Calf',
-                  'Heifer',
-                  'Bull',
-                ], (v) => setState(() => _type = v)),
-                second: _select('Gender', _gender, [
-                  'Female',
-                  'Male',
-                ], (v) => setState(() => _gender = v)),
+                first: _select(
+                  'Type',
+                  _type,
+                  ['Cow', 'Ox', 'Buffalo', 'Calf', 'Heifer', 'Bull'],
+                  (v) {
+                    setState(() {
+                      _type = v;
+                      if (!_canProduceMilkFrom(type: _type, gender: _gender)) {
+                        _dailyMilk.clear();
+                      }
+                    });
+                  },
+                ),
+                second: _select('Gender', _gender, ['Female', 'Male'], (v) {
+                  setState(() {
+                    _gender = v;
+                    if (!_canProduceMilkFrom(type: _type, gender: _gender)) {
+                      _dailyMilk.clear();
+                      _pregnancy = 'Not Pregnant';
+                    }
+                  });
+                }),
               ),
               const SizedBox(height: 12),
               _fieldPair(
@@ -573,11 +588,13 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
               const SizedBox(height: 12),
               TextField(
                 controller: _dailyMilk,
+                enabled: canProduceMilk,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Normal daily milk (L)',
-                  helperText:
-                      'Change this when the cow normal production changes.',
+                  helperText: canProduceMilk
+                      ? 'Change this when the cow normal production changes.'
+                      : 'Male animals, bulls, oxen, and calves do not produce milk.',
                 ),
               ),
               const SizedBox(height: 12),
@@ -588,11 +605,14 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 4),
-              _select('Pregnancy', _pregnancy, [
-                'Not Pregnant',
-                'Pregnant',
-                'Check Needed',
-              ], (v) => setState(() => _pregnancy = v)),
+              _select(
+                'Pregnancy',
+                _pregnancy,
+                canProduceMilk
+                    ? ['Not Pregnant', 'Pregnant', 'Check Needed']
+                    : ['Not Pregnant'],
+                (v) => setState(() => _pregnancy = v),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _notes,
@@ -658,7 +678,11 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
     }
     final provider = context.read<FarmProvider>();
     final animal = widget.animal;
-    final defaultDailyMilk = double.tryParse(_dailyMilk.text.trim()) ?? 0;
+    final canProduceMilk = _canProduceMilkFrom(type: _type, gender: _gender);
+    final defaultDailyMilk = canProduceMilk
+        ? double.tryParse(_dailyMilk.text.trim()) ?? 0
+        : 0.0;
+    final pregnancyStatus = canProduceMilk ? _pregnancy : 'Not Pregnant';
     if (animal == null) {
       await provider.addAnimal(
         token: token,
@@ -683,7 +707,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
         healthStatus: _health,
         defaultDailyMilk: defaultDailyMilk,
         vaccinated: _vaccinated,
-        pregnancyStatus: _pregnancy,
+        pregnancyStatus: pregnancyStatus,
         notes: _notes.text.trim(),
       );
     }
@@ -692,12 +716,36 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
 }
 
 Future<void> _showMilkSheet(BuildContext context, AnimalModel animal) async {
+  if (!_canProduceMilk(animal)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Milk can only be recorded for active female milk animals.',
+        ),
+      ),
+    );
+    return;
+  }
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (_) => _MilkSheet(animal: animal),
   );
+}
+
+bool _canProduceMilk(AnimalModel animal) {
+  return animal.isActive &&
+      _canProduceMilkFrom(type: animal.type, gender: animal.gender ?? '');
+}
+
+bool _canProduceMilkFrom({required String type, required String gender}) {
+  final normalizedGender = gender.toLowerCase();
+  final normalizedType = type.toLowerCase();
+  if (normalizedGender == 'male') return false;
+  return normalizedType != 'bull' &&
+      normalizedType != 'ox' &&
+      normalizedType != 'calf';
 }
 
 class _MilkSheet extends StatefulWidget {

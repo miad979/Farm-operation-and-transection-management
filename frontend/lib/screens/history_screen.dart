@@ -1000,7 +1000,10 @@ class _MilkRecordSheetState extends State<_MilkRecordSheet> {
     final farm = context.watch<FarmProvider>();
     final lang = context.watch<LanguageProvider>();
     final editing = widget.record != null;
-    final animals = farm.animals;
+    final animals = farm.animals.where(_canProduceMilk).toList();
+    if (_animalId != null && !animals.any((animal) => animal.id == _animalId)) {
+      _animalId = null;
+    }
     _animalId ??= animals.isNotEmpty ? animals.first.id : null;
 
     return _SheetFrame(
@@ -1730,6 +1733,13 @@ int? _recordId(Map<String, dynamic>? record) {
   final value = record?['id'];
   if (value is int) return value;
   return int.tryParse('$value');
+}
+
+bool _canProduceMilk(dynamic animal) {
+  final gender = '${animal.gender ?? ''}'.toLowerCase();
+  final type = '${animal.type ?? ''}'.toLowerCase();
+  if (animal.isActive != true || gender == 'male') return false;
+  return type != 'bull' && type != 'ox' && type != 'calf';
 }
 
 List<dynamic> _filteredRecords(List<dynamic> records, String query) {

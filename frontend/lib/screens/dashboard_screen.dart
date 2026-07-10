@@ -51,7 +51,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final farm = context.watch<FarmProvider>();
     final auth = context.watch<AuthProvider>();
+    final lang = context.watch<LanguageProvider>();
     final wide = MediaQuery.sizeOf(context).width >= 980;
+    final showingRecordPage = _selectedIndex == 1;
 
     return Scaffold(
       appBar: wide
@@ -100,20 +102,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        _Header(
-                          isLoading: farm.isLoading,
-                          onRefresh: _load,
-                          onAddRecord: () => _showQuickRecord(context),
-                          onBackup: () => _showBackupSheet(context),
-                        ),
-                        if (farm.error != null) ...[
-                          const SizedBox(height: 12),
-                          _ErrorBanner(message: farm.error!, onRetry: _load),
+                        if (showingRecordPage)
+                          _RecordPage(
+                            farm: farm,
+                            onAddRecord: () => _showQuickRecord(context),
+                          )
+                        else ...[
+                          _Header(
+                            isLoading: farm.isLoading,
+                            onRefresh: _load,
+                            onAddRecord: () => _showQuickRecord(context),
+                            onBackup: () => _showBackupSheet(context),
+                          ),
+                          if (farm.error != null) ...[
+                            const SizedBox(height: 12),
+                            _ErrorBanner(message: farm.error!, onRetry: _load),
+                          ],
+                          const SizedBox(height: 18),
+                          _KpiGrid(farm: farm),
+                          const SizedBox(height: 18),
+                          _DashboardBody(farm: farm),
                         ],
-                        const SizedBox(height: 18),
-                        _KpiGrid(farm: farm),
-                        const SizedBox(height: 18),
-                        _DashboardBody(farm: farm),
                       ]),
                     ),
                   ),
@@ -129,20 +138,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {
                 if (index == 1) {
+                  setState(() => _selectedIndex = index);
+                } else if (index == 2) {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AnimalsScreen()),
                   );
-                } else if (index == 2) {
+                } else if (index == 3) {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const PersonalMoneyScreen(),
                     ),
                   );
-                } else if (index == 3) {
+                } else if (index == 4) {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ReportsScreen()),
                   );
-                } else if (index == 4) {
+                } else if (index == 5) {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const HistoryScreen()),
                   );
@@ -150,26 +161,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   setState(() => _selectedIndex = index);
                 }
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  label: 'Dashboard',
+                  icon: const Icon(Icons.dashboard_outlined),
+                  label: lang.text('Dashboard', 'ড্যাশবোর্ড'),
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.pets_outlined),
-                  label: 'Animals',
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: lang.text('Record', 'রেকর্ড'),
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  label: 'Personal',
+                  icon: const Icon(Icons.pets_outlined),
+                  label: lang.text('Animals', 'পশু'),
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.assessment_outlined),
-                  label: 'Summary',
+                  icon: const Icon(Icons.account_balance_wallet_outlined),
+                  label: lang.text('Personal', 'ব্যক্তিগত'),
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.insights_outlined),
-                  label: 'History',
+                  icon: const Icon(Icons.assessment_outlined),
+                  label: lang.text('Summary', 'সারাংশ'),
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.insights_outlined),
+                  label: lang.text('History', 'ইতিহাস'),
                 ),
               ],
             ),
@@ -199,6 +214,7 @@ class _SideNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     return Container(
       width: 244,
       padding: const EdgeInsets.all(16),
@@ -236,20 +252,22 @@ class _SideNav extends StatelessWidget {
             minExtendedWidth: 212,
             onDestinationSelected: (index) {
               if (index == 1) {
+                onSelect(index);
+              } else if (index == 2) {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AnimalsScreen()),
                 );
-              } else if (index == 2) {
+              } else if (index == 3) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const PersonalMoneyScreen(),
                   ),
                 );
-              } else if (index == 3) {
+              } else if (index == 4) {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ReportsScreen()),
                 );
-              } else if (index == 4) {
+              } else if (index == 5) {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const HistoryScreen()),
                 );
@@ -257,26 +275,30 @@ class _SideNav extends StatelessWidget {
                 onSelect(index);
               }
             },
-            destinations: const [
+            destinations: [
               NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                label: Text('Dashboard'),
+                icon: const Icon(Icons.dashboard_outlined),
+                label: Text(lang.text('Dashboard', 'ড্যাশবোর্ড')),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.pets_outlined),
-                label: Text('Animals'),
+                icon: const Icon(Icons.add_circle_outline),
+                label: Text(lang.text('Record', 'রেকর্ড')),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.account_balance_wallet_outlined),
-                label: Text('Personal'),
+                icon: const Icon(Icons.pets_outlined),
+                label: Text(lang.text('Animals', 'পশু')),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.assessment_outlined),
-                label: Text('Summary'),
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: Text(lang.text('Personal', 'ব্যক্তিগত')),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.insights_outlined),
-                label: Text('History'),
+                icon: const Icon(Icons.assessment_outlined),
+                label: Text(lang.text('Summary', 'সারাংশ')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.insights_outlined),
+                label: Text(lang.text('History', 'ইতিহাস')),
               ),
             ],
           ),
@@ -585,6 +607,72 @@ class _DashboardBody extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _RecordPage extends StatelessWidget {
+  const _RecordPage({required this.farm, required this.onAddRecord});
+
+  final FarmProvider farm;
+  final VoidCallback onAddRecord;
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          lang.text('Record Center', 'রেকর্ড সেন্টার'),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          lang.text(
+            'Add daily farm records from one simple place.',
+            'এক জায়গা থেকে প্রতিদিনের খামারের রেকর্ড যোগ করুন।',
+          ),
+          style: const TextStyle(color: Color(0xFF526166)),
+        ),
+        const SizedBox(height: 16),
+        _ControlPanel(onAddRecord: onAddRecord),
+        const SizedBox(height: 12),
+        _Panel(
+          title: lang.text('Today quick check', 'আজকের দ্রুত চেক'),
+          child: Column(
+            children: [
+              _FormulaRow(
+                label: lang.text('Milk today', 'আজকের দুধ'),
+                value:
+                    '${readNum(farm.dashboard, ['milk_production', 'total_liters']).toStringAsFixed(1)} L',
+                icon: Icons.water_drop_outlined,
+                color: const Color(0xFF1F6FEB),
+              ),
+              _FormulaRow(
+                label: lang.text('Sales today', 'আজকের বিক্রি'),
+                value: _money(readNum(farm.dashboard, ['sales'])),
+                icon: Icons.sell_outlined,
+                color: const Color(0xFF147D64),
+              ),
+              _FormulaRow(
+                label: lang.text('Farm cash', 'খামারের নগদ'),
+                value: _money(readNum(farm.monthly, ['business_cash'])),
+                icon: Icons.account_balance_wallet_outlined,
+                color: const Color(0xFF7C3AED),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: onAddRecord,
+          icon: const Icon(Icons.add),
+          label: Text(lang.text('Open record form', 'রেকর্ড ফর্ম খুলুন')),
+        ),
+      ],
     );
   }
 }
@@ -1564,6 +1652,13 @@ num valueNum(dynamic value) {
 
 String _money(num value) => '৳${value.toStringAsFixed(0)}';
 
+bool _canProduceMilk(dynamic animal) {
+  final gender = '${animal.gender ?? ''}'.toLowerCase();
+  final type = '${animal.type ?? ''}'.toLowerCase();
+  if (animal.isActive != true || gender == 'male') return false;
+  return type != 'bull' && type != 'ox' && type != 'calf';
+}
+
 String _choiceLabel(String value) {
   return switch (value) {
     'milk' => 'Milk',
@@ -1585,6 +1680,31 @@ String _choiceLabel(String value) {
     'investor' => 'Investor',
     'partner' => 'Partner',
     'equipment' => 'Tools/equipment',
+    _ => value,
+  };
+}
+
+String _choiceLabelBn(String value) {
+  return switch (value) {
+    'milk' => 'দুধ',
+    'cattle' => 'গরু / পশু',
+    'other' => 'অন্যান্য',
+    'feed' => 'খাদ্য',
+    'medicine' => 'ওষুধ',
+    'veterinary' => 'ভেট ডাক্তার',
+    'salary' => 'কর্মচারীর বেতন',
+    'transport' => 'পরিবহন',
+    'electricity' => 'বিদ্যুৎ',
+    'maintenance' => 'মেরামত',
+    'miscellaneous' => 'অন্যান্য খরচ',
+    'household' => 'পরিবারের প্রয়োজন',
+    'medical' => 'চিকিৎসা',
+    'education' => 'শিক্ষা',
+    'personal' => 'ব্যক্তিগত',
+    'owner' => 'মালিক',
+    'investor' => 'ইনভেস্টর',
+    'partner' => 'পার্টনার',
+    'equipment' => 'যন্ত্র/সরঞ্জাম',
     _ => value,
   };
 }
@@ -1911,6 +2031,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
   @override
   Widget build(BuildContext context) {
     final farm = context.watch<FarmProvider>();
+    final lang = context.watch<LanguageProvider>();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1926,7 +2047,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _sheetTitle,
+                _sheetTitle(lang),
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -1947,7 +2068,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
               FilledButton.icon(
                 onPressed: _save,
                 icon: const Icon(Icons.check),
-                label: Text(_buttonLabel),
+                label: Text(_buttonLabel(lang)),
               ),
             ],
           ),
@@ -1957,7 +2078,11 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
   }
 
   List<Widget> _milkFields(FarmProvider farm) {
-    final animals = farm.animals;
+    final lang = context.watch<LanguageProvider>();
+    final animals = farm.animals.where(_canProduceMilk).toList();
+    if (_animalId != null && !animals.any((animal) => animal.id == _animalId)) {
+      _animalId = null;
+    }
     return [
       if (animals.isEmpty)
         Container(
@@ -1967,15 +2092,18 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFFED7AA)),
           ),
-          child: const Text(
-            'Add an animal first, then record milk production.',
+          child: Text(
+            lang.text(
+              'Add an active female cow or buffalo first, then record milk.',
+              'আগে একটি সক্রিয় দুধ দেওয়া মাদি গরু বা মহিষ যোগ করুন।',
+            ),
           ),
         )
       else
         DropdownButtonFormField<int>(
           initialValue: _animalId,
-          decoration: const InputDecoration(labelText: 'Animal'),
-          hint: const Text('Select animal'),
+          decoration: InputDecoration(labelText: lang.text('Animal', 'পশু')),
+          hint: Text(lang.text('Select animal', 'পশু নির্বাচন করুন')),
           items: animals
               .map(
                 (animal) => DropdownMenuItem<int>(
@@ -1990,23 +2118,29 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       TextField(
         controller: _morningMilk,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          labelText: 'Actual milk today (L)',
-          helperText:
-              'Only enter this when today is different from the cow normal milk.',
+        decoration: InputDecoration(
+          labelText: lang.text(
+            'Actual milk today (L)',
+            'আজকের আসল দুধ (লিটার)',
+          ),
+          helperText: lang.text(
+            'Only enter this when today is different from the cow normal milk.',
+            'গরুর স্বাভাবিক দুধের চেয়ে আজ আলাদা হলে এটি লিখুন।',
+          ),
         ),
       ),
     ];
   }
 
   List<Widget> _saleFields() {
+    final lang = context.watch<LanguageProvider>();
     final farm = context.read<FarmProvider>();
     final activeAnimals = farm.animals
         .where((animal) => animal.isActive)
         .toList();
     return [
       _select(
-        label: 'What did you sell?',
+        label: lang.text('What did you sell?', 'আপনি কী বিক্রি করেছেন?'),
         value: _saleType,
         items: const ['milk', 'cattle', 'other'],
         onChanged: (value) => setState(() => _saleType = value),
@@ -2021,13 +2155,20 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFFED7AA)),
             ),
-            child: const Text('No active animals available to sell.'),
+            child: Text(
+              lang.text(
+                'No active animals available to sell.',
+                'বিক্রি করার মতো সক্রিয় পশু নেই।',
+              ),
+            ),
           )
         else
           DropdownButtonFormField<int>(
             initialValue: _animalId,
-            decoration: const InputDecoration(labelText: 'Animal sold'),
-            hint: const Text('Select cow/animal'),
+            decoration: InputDecoration(
+              labelText: lang.text('Animal sold', 'বিক্রি হওয়া পশু'),
+            ),
+            hint: Text(lang.text('Select cow/animal', 'গরু/পশু নির্বাচন করুন')),
             items: activeAnimals
                 .map(
                   (animal) => DropdownMenuItem<int>(
@@ -2040,36 +2181,52 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
           ),
       ],
       const SizedBox(height: 12),
-      _descriptionField(_saleType == 'cattle' ? 'Buyer or note' : 'Short note'),
+      _descriptionField(
+        _saleType == 'cattle'
+            ? lang.text('Buyer or note', 'ক্রেতা বা নোট')
+            : lang.text('Short note', 'ছোট নোট'),
+      ),
       const SizedBox(height: 12),
       TextField(
         controller: _customerName,
-        decoration: const InputDecoration(labelText: 'Customer name'),
+        decoration: InputDecoration(
+          labelText: lang.text('Customer name', 'ক্রেতার নাম'),
+        ),
       ),
       const SizedBox(height: 12),
       TextField(
         controller: _customerPhone,
         keyboardType: TextInputType.phone,
-        decoration: const InputDecoration(labelText: 'Customer phone'),
+        decoration: InputDecoration(
+          labelText: lang.text('Customer phone', 'ক্রেতার ফোন'),
+        ),
       ),
       const SizedBox(height: 12),
-      _amountField(_saleType == 'cattle' ? 'Cow sale amount' : 'Bill amount'),
+      _amountField(
+        _saleType == 'cattle'
+            ? lang.text('Cow sale amount', 'গরু বিক্রির টাকা')
+            : lang.text('Bill amount', 'মোট বিল'),
+      ),
       const SizedBox(height: 12),
       TextField(
         controller: _paidAmount,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          labelText: 'Paid now',
-          helperText: 'Leave empty when the full bill is paid.',
+        decoration: InputDecoration(
+          labelText: lang.text('Paid now', 'এখন পেয়েছেন'),
+          helperText: lang.text(
+            'Leave empty when the full bill is paid.',
+            'পুরো টাকা পেলে খালি রাখুন।',
+          ),
         ),
       ),
     ];
   }
 
   List<Widget> _expenseFields() {
+    final lang = context.watch<LanguageProvider>();
     return [
       _select(
-        label: 'What was the cost for?',
+        label: lang.text('What was the cost for?', 'কিসের জন্য খরচ হয়েছে?'),
         value: _category,
         items: const [
           'feed',
@@ -2084,31 +2241,35 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
         onChanged: (value) => setState(() => _category = value),
       ),
       const SizedBox(height: 12),
-      _descriptionField('Short note'),
+      _descriptionField(lang.text('Short note', 'ছোট নোট')),
       const SizedBox(height: 12),
-      _amountField('How much was spent?'),
+      _amountField(lang.text('How much was spent?', 'কত টাকা খরচ হয়েছে?')),
     ];
   }
 
   List<Widget> _personalFields() {
+    final lang = context.watch<LanguageProvider>();
     return [
       _select(
-        label: 'Why did you take it?',
+        label: lang.text('Why did you take it?', 'কেন টাকা নিয়েছেন?'),
         value: _reason,
         items: const ['household', 'medical', 'education', 'personal', 'other'],
         onChanged: (value) => setState(() => _reason = value),
       ),
       const SizedBox(height: 12),
-      _descriptionField('Short note'),
+      _descriptionField(lang.text('Short note', 'ছোট নোট')),
       const SizedBox(height: 12),
-      _amountField('How much went to pocket?'),
+      _amountField(
+        lang.text('How much went to pocket?', 'পকেটে কত টাকা গেছে?'),
+      ),
     ];
   }
 
   List<Widget> _capitalFields() {
+    final lang = context.watch<LanguageProvider>();
     return [
       _select(
-        label: 'Who added the money?',
+        label: lang.text('Who added the money?', 'কে টাকা যোগ করেছেন?'),
         value: _capitalSource,
         items: const ['owner', 'investor', 'partner', 'other'],
         onChanged: (value) => setState(() => _capitalSource = value),
@@ -2118,21 +2279,25 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
         controller: _contributorName,
         decoration: InputDecoration(
           labelText: _capitalSource == 'owner'
-              ? 'Owner name'
-              : 'Investor / partner name',
+              ? lang.text('Owner name', 'মালিকের নাম')
+              : lang.text(
+                  'Investor / partner name',
+                  'ইনভেস্টর / পার্টনারের নাম',
+                ),
         ),
       ),
       const SizedBox(height: 12),
-      _descriptionField('Why was it added?'),
+      _descriptionField(lang.text('Why was it added?', 'কেন টাকা যোগ হয়েছে?')),
       const SizedBox(height: 12),
-      _amountField('How much was added?'),
+      _amountField(lang.text('How much was added?', 'কত টাকা যোগ হয়েছে?')),
     ];
   }
 
   List<Widget> _inventoryFields() {
+    final lang = context.watch<LanguageProvider>();
     return [
       _select(
-        label: 'What kind of item?',
+        label: lang.text('What kind of item?', 'কী ধরনের জিনিস?'),
         value: _itemType,
         items: const ['feed', 'medicine', 'equipment', 'other'],
         onChanged: (value) => setState(() => _itemType = value),
@@ -2140,7 +2305,9 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       const SizedBox(height: 12),
       TextField(
         controller: _itemName,
-        decoration: const InputDecoration(labelText: 'Feed/item name'),
+        decoration: InputDecoration(
+          labelText: lang.text('Feed/item name', 'খাদ্য/জিনিসের নাম'),
+        ),
       ),
       const SizedBox(height: 12),
       Row(
@@ -2149,14 +2316,18 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
             child: TextField(
               controller: _quantity,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Current amount'),
+              decoration: InputDecoration(
+                labelText: lang.text('Current amount', 'বর্তমান পরিমাণ'),
+              ),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _unit,
-              decoration: const InputDecoration(labelText: 'Unit'),
+              decoration: InputDecoration(
+                labelText: lang.text('Unit', 'ইউনিট'),
+              ),
             ),
           ),
         ],
@@ -2165,15 +2336,20 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       TextField(
         controller: _reorderLevel,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'Warn me below this'),
+        decoration: InputDecoration(
+          labelText: lang.text('Warn me below this', 'এর নিচে হলে সতর্ক করুন'),
+        ),
       ),
       const SizedBox(height: 12),
       TextField(
         controller: _dailyUsage,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          labelText: 'Used per day',
-          helperText: 'The app can reduce this automatically each day.',
+        decoration: InputDecoration(
+          labelText: lang.text('Used per day', 'প্রতিদিন ব্যবহার'),
+          helperText: lang.text(
+            'The app can reduce this automatically each day.',
+            'অ্যাপ প্রতিদিন এই পরিমাণ নিজে নিজে কমাতে পারে।',
+          ),
         ),
       ),
     ];
@@ -2185,13 +2361,16 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
     required List<String> items,
     required ValueChanged<String> onChanged,
   }) {
+    final lang = context.watch<LanguageProvider>();
     return DropdownButtonFormField<String>(
       initialValue: value,
       decoration: InputDecoration(labelText: label),
       items: items
           .map(
-            (item) =>
-                DropdownMenuItem(value: item, child: Text(_choiceLabel(item))),
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(lang.text(_choiceLabel(item), _choiceLabelBn(item))),
+            ),
           )
           .toList(),
       onChanged: (value) => onChanged(value ?? items.first),
@@ -2213,26 +2392,26 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
     );
   }
 
-  String get _sheetTitle {
+  String _sheetTitle(LanguageProvider lang) {
     return switch (_type) {
-      'milk' => 'Record milk',
-      'sale' => 'Record a sale',
-      'personal' => 'Take money to pocket',
-      'expense' => 'Record farm spending',
-      'capital' => 'Add money to farm',
-      'inventory' => 'Add feed or stock',
-      _ => 'Add record',
+      'milk' => lang.text('Record milk', 'দুধ রেকর্ড করুন'),
+      'sale' => lang.text('Record a sale', 'বিক্রি রেকর্ড করুন'),
+      'personal' => lang.text('Take money to pocket', 'পকেটে টাকা নিন'),
+      'expense' => lang.text('Record farm spending', 'খরচ রেকর্ড করুন'),
+      'capital' => lang.text('Add money to farm', 'খামারে টাকা যোগ করুন'),
+      'inventory' => lang.text('Add feed or stock', 'খাদ্য/স্টক যোগ করুন'),
+      _ => lang.text('Add record', 'রেকর্ড যোগ করুন'),
     };
   }
 
-  String get _buttonLabel {
+  String _buttonLabel(LanguageProvider lang) {
     return switch (_type) {
-      'milk' => 'Save milk',
-      'personal' => 'Save pocket money',
-      'expense' => 'Save spending',
-      'capital' => 'Save farm money',
-      'inventory' => 'Save stock',
-      _ => 'Save sale',
+      'milk' => lang.text('Save milk', 'দুধ সংরক্ষণ'),
+      'personal' => lang.text('Save pocket money', 'পকেটের টাকা সংরক্ষণ'),
+      'expense' => lang.text('Save spending', 'খরচ সংরক্ষণ'),
+      'capital' => lang.text('Save farm money', 'খামারের টাকা সংরক্ষণ'),
+      'inventory' => lang.text('Save stock', 'স্টক সংরক্ষণ'),
+      _ => lang.text('Save sale', 'বিক্রি সংরক্ষণ'),
     };
   }
 
@@ -2242,7 +2421,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
     final provider = context.read<FarmProvider>();
 
     if (_type == 'milk') {
-      final animals = provider.animals;
+      final animals = provider.animals.where(_canProduceMilk).toList();
       final animalId =
           _animalId ?? (animals.isNotEmpty ? animals.first.id : null);
       final totalMilk = double.tryParse(_morningMilk.text.trim()) ?? 0;
