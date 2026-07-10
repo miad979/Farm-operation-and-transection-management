@@ -19,6 +19,10 @@ A cross-platform dairy farm management system built with Flutter, Django REST Fr
 
 For non-technical daily usage instructions, read [USER_MANUAL.md](USER_MANUAL.md).
 
+## Developer Manual
+
+For setup, maintenance, testing, architecture, and release instructions, read [DEVELOPER_MANUAL.md](DEVELOPER_MANUAL.md).
+
 ## Offline-First Mobile Use
 
 The Flutter app includes an offline phone mode. A farmer can tap **Use offline on this phone** from the first screen and start recording farm data without creating an online account or depending on internet.
