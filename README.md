@@ -23,6 +23,10 @@ For non-technical daily usage instructions, read [USER_MANUAL.md](USER_MANUAL.md
 
 For setup, maintenance, testing, architecture, and release instructions, read [DEVELOPER_MANUAL.md](DEVELOPER_MANUAL.md).
 
+## Software Development Documentation
+
+For the full formal documentation set, start with [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md).
+
 ## Offline-First Mobile Use
 
 The Flutter app includes an offline phone mode. A farmer can tap **Use offline on this phone** from the first screen and start recording farm data without creating an online account or depending on internet.
