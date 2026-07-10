@@ -677,11 +677,14 @@ class _SaleSheetState extends State<_SaleSheet> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _saleType,
-          decoration: InputDecoration(
-            labelText: lang.text('Sale type', 'বিক্রির ধরন'),
-          ),
+          decoration: const InputDecoration(labelText: 'What did you sell?'),
           items: const ['milk', 'cattle', 'other']
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(_choiceLabel(item)),
+                ),
+              )
               .toList(),
           onChanged: (value) => setState(() => _saleType = value ?? _saleType),
         ),
@@ -707,7 +710,7 @@ class _SaleSheetState extends State<_SaleSheet> {
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: lang.text('Amount', 'টাকা')),
+          decoration: const InputDecoration(labelText: 'Bill amount'),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -806,7 +809,9 @@ class _ExpenseSheetState extends State<_ExpenseSheet> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _category,
-          decoration: InputDecoration(labelText: lang.text('Category', 'ধরন')),
+          decoration: const InputDecoration(
+            labelText: 'What was the cost for?',
+          ),
           items:
               const [
                     'feed',
@@ -819,7 +824,10 @@ class _ExpenseSheetState extends State<_ExpenseSheet> {
                     'miscellaneous',
                   ]
                   .map(
-                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                    (item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(_choiceLabel(item)),
+                    ),
                   )
                   .toList(),
           onChanged: (value) => setState(() => _category = value ?? _category),
@@ -827,9 +835,7 @@ class _ExpenseSheetState extends State<_ExpenseSheet> {
         const SizedBox(height: 10),
         TextField(
           controller: _description,
-          decoration: InputDecoration(
-            labelText: lang.text('Description', 'বিবরণ'),
-          ),
+          decoration: const InputDecoration(labelText: 'Short note'),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -1103,11 +1109,14 @@ class _TakenMoneySheetState extends State<_TakenMoneySheet> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _reason,
-          decoration: InputDecoration(labelText: lang.text('Reason', 'কারণ')),
+          decoration: const InputDecoration(labelText: 'Why did you take it?'),
           items:
               const ['household', 'medical', 'education', 'personal', 'other']
                   .map(
-                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                    (item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(_choiceLabel(item)),
+                    ),
                   )
                   .toList(),
           onChanged: (value) => setState(() => _reason = value ?? _reason),
@@ -1115,13 +1124,15 @@ class _TakenMoneySheetState extends State<_TakenMoneySheet> {
         const SizedBox(height: 10),
         TextField(
           controller: _description,
-          decoration: InputDecoration(labelText: lang.text('Note', 'নোট')),
+          decoration: const InputDecoration(labelText: 'Short note'),
         ),
         const SizedBox(height: 10),
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: lang.text('Amount', 'টাকা')),
+          decoration: const InputDecoration(
+            labelText: 'How much went to pocket?',
+          ),
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
@@ -1209,11 +1220,14 @@ class _InvestmentSheetState extends State<_InvestmentSheet> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _sourceType,
-          decoration: InputDecoration(
-            labelText: lang.text('Money source', 'টাকার উৎস'),
-          ),
+          decoration: const InputDecoration(labelText: 'Who added the money?'),
           items: const ['owner', 'investor', 'partner', 'other']
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(_choiceLabel(item)),
+                ),
+              )
               .toList(),
           onChanged: (value) =>
               setState(() => _sourceType = value ?? _sourceType),
@@ -1226,13 +1240,13 @@ class _InvestmentSheetState extends State<_InvestmentSheet> {
         const SizedBox(height: 10),
         TextField(
           controller: _description,
-          decoration: InputDecoration(labelText: lang.text('Note', 'নোট')),
+          decoration: const InputDecoration(labelText: 'Why was it added?'),
         ),
         const SizedBox(height: 10),
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: lang.text('Amount', 'টাকা')),
+          decoration: const InputDecoration(labelText: 'How much was added?'),
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
@@ -1330,9 +1344,14 @@ class _StockSheetState extends State<_StockSheet> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _type,
-          decoration: InputDecoration(labelText: lang.text('Type', 'ধরন')),
+          decoration: const InputDecoration(labelText: 'What kind of item?'),
           items: const ['feed', 'medicine', 'equipment', 'other']
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(_choiceLabel(item)),
+                ),
+              )
               .toList(),
           onChanged: (value) => setState(() => _type = value ?? _type),
         ),
@@ -1370,16 +1389,15 @@ class _StockSheetState extends State<_StockSheet> {
         TextField(
           controller: _reorderLevel,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: lang.text('Warn when below', 'এর নিচে হলে সতর্ক'),
-          ),
+          decoration: const InputDecoration(labelText: 'Warn me below this'),
         ),
         const SizedBox(height: 10),
         TextField(
           controller: _dailyUsage,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: lang.text('Used each day', 'প্রতিদিন ব্যবহার'),
+          decoration: const InputDecoration(
+            labelText: 'Used per day',
+            helperText: 'The app can reduce this automatically each day.',
           ),
         ),
         SwitchListTile(
@@ -1887,4 +1905,29 @@ String _monthName(DateTime date) {
 String _money(dynamic value) {
   final number = value is num ? value : num.tryParse('$value') ?? 0;
   return '৳${number.toStringAsFixed(0)}';
+}
+
+String _choiceLabel(String value) {
+  return switch (value) {
+    'milk' => 'Milk',
+    'cattle' => 'Cow / cattle',
+    'other' => 'Other',
+    'feed' => 'Feed',
+    'medicine' => 'Medicine',
+    'veterinary' => 'Vet doctor',
+    'salary' => 'Worker salary',
+    'transport' => 'Transport',
+    'electricity' => 'Electricity',
+    'maintenance' => 'Repair',
+    'miscellaneous' => 'Other cost',
+    'household' => 'Family needs',
+    'medical' => 'Medical',
+    'education' => 'Education',
+    'personal' => 'Personal',
+    'owner' => 'Owner',
+    'investor' => 'Investor',
+    'partner' => 'Partner',
+    'equipment' => 'Tools/equipment',
+    _ => value,
+  };
 }

@@ -584,28 +584,28 @@ class _ControlPanel extends StatelessWidget {
       ),
       _ControlAction(
         Icons.receipt_long_outlined,
-        lang.text('Farm cost', 'খামার খরচ'),
+        lang.text('Spend money', 'খরচ করুন'),
         onAddRecord,
       ),
       _ControlAction(
         Icons.home_work_outlined,
-        lang.text('Take money', 'টাকা নিন'),
+        lang.text('Take to pocket', 'পকেটে নিন'),
         onAddRecord,
       ),
       _ControlAction(
         Icons.savings_outlined,
-        lang.text('Add investment', 'বিনিয়োগ যোগ'),
+        lang.text('Add farm money', 'খামারে টাকা যোগ'),
         onAddRecord,
       ),
       _ControlAction(
         Icons.inventory_2_outlined,
-        lang.text('Feed/stock', 'খাদ্য/স্টক'),
+        lang.text('Add feed stock', 'খাদ্য যোগ'),
         onAddRecord,
       ),
     ];
 
     return _Panel(
-      title: lang.text('Add today', 'আজকের রেকর্ড'),
+      title: lang.text('What do you want to record?', 'কোনটি রেকর্ড করবেন?'),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final columns = constraints.maxWidth > 520 ? 3 : 2;
@@ -1481,6 +1481,31 @@ num valueNum(dynamic value) {
 
 String _money(num value) => '৳${value.toStringAsFixed(0)}';
 
+String _choiceLabel(String value) {
+  return switch (value) {
+    'milk' => 'Milk',
+    'cattle' => 'Cow / cattle',
+    'other' => 'Other',
+    'feed' => 'Feed',
+    'medicine' => 'Medicine',
+    'veterinary' => 'Vet doctor',
+    'salary' => 'Worker salary',
+    'transport' => 'Transport',
+    'electricity' => 'Electricity',
+    'maintenance' => 'Repair',
+    'miscellaneous' => 'Other cost',
+    'household' => 'Family needs',
+    'medical' => 'Medical',
+    'education' => 'Education',
+    'personal' => 'Personal',
+    'owner' => 'Owner',
+    'investor' => 'Investor',
+    'partner' => 'Partner',
+    'equipment' => 'Tools/equipment',
+    _ => value,
+  };
+}
+
 Future<void> _showQuickRecord(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -1646,22 +1671,22 @@ class _RecordTypeGrid extends StatelessWidget {
       _RecordTypeOption(
         'expense',
         Icons.receipt_long_outlined,
-        lang.text('Farm cost', 'খামার খরচ'),
+        lang.text('Spend money', 'খরচ করুন'),
       ),
       _RecordTypeOption(
         'personal',
         Icons.home_work_outlined,
-        lang.text('Take money', 'টাকা নিন'),
+        lang.text('Take to pocket', 'পকেটে নিন'),
       ),
       _RecordTypeOption(
         'capital',
         Icons.savings_outlined,
-        lang.text('Investment', 'বিনিয়োগ'),
+        lang.text('Add farm money', 'খামারে টাকা যোগ'),
       ),
       _RecordTypeOption(
         'inventory',
         Icons.inventory_2_outlined,
-        lang.text('Feed/stock', 'খাদ্য/স্টক'),
+        lang.text('Add feed stock', 'খাদ্য যোগ'),
       ),
     ];
 
@@ -1803,7 +1828,6 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
   @override
   Widget build(BuildContext context) {
     final farm = context.watch<FarmProvider>();
-    final lang = context.watch<LanguageProvider>();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -1819,7 +1843,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                lang.text('Add record', 'রেকর্ড যোগ'),
+                _sheetTitle,
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -1899,7 +1923,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
         .toList();
     return [
       _select(
-        label: 'Sale type',
+        label: 'What did you sell?',
         value: _saleType,
         items: const ['milk', 'cattle', 'other'],
         onChanged: (value) => setState(() => _saleType = value),
@@ -1933,9 +1957,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
           ),
       ],
       const SizedBox(height: 12),
-      _descriptionField(
-        _saleType == 'cattle' ? 'Buyer / sale note' : 'Description',
-      ),
+      _descriptionField(_saleType == 'cattle' ? 'Buyer or note' : 'Short note'),
       const SizedBox(height: 12),
       TextField(
         controller: _customerName,
@@ -1964,7 +1986,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
   List<Widget> _expenseFields() {
     return [
       _select(
-        label: 'Farm cost type',
+        label: 'What was the cost for?',
         value: _category,
         items: const [
           'feed',
@@ -1979,31 +2001,31 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
         onChanged: (value) => setState(() => _category = value),
       ),
       const SizedBox(height: 12),
-      _descriptionField('Description'),
+      _descriptionField('Short note'),
       const SizedBox(height: 12),
-      _amountField('Expense amount'),
+      _amountField('How much was spent?'),
     ];
   }
 
   List<Widget> _personalFields() {
     return [
       _select(
-        label: 'Reason for taking money',
+        label: 'Why did you take it?',
         value: _reason,
         items: const ['household', 'medical', 'education', 'personal', 'other'],
         onChanged: (value) => setState(() => _reason = value),
       ),
       const SizedBox(height: 12),
-      _descriptionField('Transfer note'),
+      _descriptionField('Short note'),
       const SizedBox(height: 12),
-      _amountField('Amount taken from farm'),
+      _amountField('How much went to pocket?'),
     ];
   }
 
   List<Widget> _capitalFields() {
     return [
       _select(
-        label: 'Money source',
+        label: 'Who added the money?',
         value: _capitalSource,
         items: const ['owner', 'investor', 'partner', 'other'],
         onChanged: (value) => setState(() => _capitalSource = value),
@@ -2018,16 +2040,16 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
         ),
       ),
       const SizedBox(height: 12),
-      _descriptionField('Purpose / note'),
+      _descriptionField('Why was it added?'),
       const SizedBox(height: 12),
-      _amountField('Investment amount'),
+      _amountField('How much was added?'),
     ];
   }
 
   List<Widget> _inventoryFields() {
     return [
       _select(
-        label: 'Item type',
+        label: 'What kind of item?',
         value: _itemType,
         items: const ['feed', 'medicine', 'equipment', 'other'],
         onChanged: (value) => setState(() => _itemType = value),
@@ -2035,7 +2057,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       const SizedBox(height: 12),
       TextField(
         controller: _itemName,
-        decoration: const InputDecoration(labelText: 'Item name'),
+        decoration: const InputDecoration(labelText: 'Feed/item name'),
       ),
       const SizedBox(height: 12),
       Row(
@@ -2044,7 +2066,7 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
             child: TextField(
               controller: _quantity,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Quantity'),
+              decoration: const InputDecoration(labelText: 'Current amount'),
             ),
           ),
           const SizedBox(width: 10),
@@ -2060,13 +2082,16 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       TextField(
         controller: _reorderLevel,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'Warn when below'),
+        decoration: const InputDecoration(labelText: 'Warn me below this'),
       ),
       const SizedBox(height: 12),
       TextField(
         controller: _dailyUsage,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'Used each day'),
+        decoration: const InputDecoration(
+          labelText: 'Used per day',
+          helperText: 'The app can reduce this automatically each day.',
+        ),
       ),
     ];
   }
@@ -2081,7 +2106,10 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
       initialValue: value,
       decoration: InputDecoration(labelText: label),
       items: items
-          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .map(
+            (item) =>
+                DropdownMenuItem(value: item, child: Text(_choiceLabel(item))),
+          )
           .toList(),
       onChanged: (value) => onChanged(value ?? items.first),
     );
@@ -2102,13 +2130,25 @@ class _QuickRecordSheetState extends State<_QuickRecordSheet> {
     );
   }
 
+  String get _sheetTitle {
+    return switch (_type) {
+      'milk' => 'Record milk',
+      'sale' => 'Record a sale',
+      'personal' => 'Take money to pocket',
+      'expense' => 'Record farm spending',
+      'capital' => 'Add money to farm',
+      'inventory' => 'Add feed or stock',
+      _ => 'Add record',
+    };
+  }
+
   String get _buttonLabel {
     return switch (_type) {
-      'milk' => 'Save milk production',
-      'personal' => 'Save money taken',
-      'expense' => 'Save farm cost',
-      'capital' => 'Save investment',
-      'inventory' => 'Save feed/stock',
+      'milk' => 'Save milk',
+      'personal' => 'Save pocket money',
+      'expense' => 'Save spending',
+      'capital' => 'Save farm money',
+      'inventory' => 'Save stock',
       _ => 'Save sale',
     };
   }
