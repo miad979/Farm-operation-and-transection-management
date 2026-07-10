@@ -124,6 +124,27 @@ class ApiService {
     return data['access'] as String;
   }
 
+  Future<Map<String, dynamic>> getProfile(String token) {
+    return _getMap(token, '/auth/profile/');
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String token,
+    required String farmName,
+    required String ownerName,
+    required String phone,
+    required String farmLocation,
+    required String languagePreference,
+  }) {
+    return _patchMap(token, '/auth/profile/', {
+      'farm_name': farmName,
+      'owner_name': ownerName,
+      'phone': phone,
+      'farm_location': farmLocation,
+      'language_preference': languagePreference,
+    });
+  }
+
   Future<List<AnimalModel>> getAnimals(String token) async {
     final results = await _getList(token, '/animals/');
     return results

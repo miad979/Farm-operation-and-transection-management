@@ -11,6 +11,7 @@ import '../providers/language_provider.dart';
 import 'animals_screen.dart';
 import 'history_screen.dart';
 import 'personal_money_screen.dart';
+import 'profile_screen.dart';
 import 'reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -40,6 +41,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _openProfile() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final farm = context.watch<FarmProvider>();
@@ -58,6 +65,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: const Icon(Icons.refresh),
                 ),
                 IconButton(
+                  tooltip: 'Profile',
+                  onPressed: _openProfile,
+                  icon: const Icon(Icons.manage_accounts_outlined),
+                ),
+                IconButton(
                   tooltip: 'Logout',
                   onPressed: auth.logout,
                   icon: const Icon(Icons.logout),
@@ -70,6 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _SideNav(
               selectedIndex: _selectedIndex,
               onSelect: (index) => setState(() => _selectedIndex = index),
+              onProfile: _openProfile,
               onLogout: auth.logout,
             ),
           Expanded(
@@ -148,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.account_balance_wallet_outlined),
-                  label: 'Money',
+                  label: 'Personal',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.assessment_outlined),
@@ -175,11 +188,13 @@ class _SideNav extends StatelessWidget {
   const _SideNav({
     required this.selectedIndex,
     required this.onSelect,
+    required this.onProfile,
     required this.onLogout,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+  final VoidCallback onProfile;
   final VoidCallback onLogout;
 
   @override
@@ -253,7 +268,7 @@ class _SideNav extends StatelessWidget {
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.account_balance_wallet_outlined),
-                label: Text('Money'),
+                label: Text('Personal'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.assessment_outlined),
@@ -266,6 +281,12 @@ class _SideNav extends StatelessWidget {
             ],
           ),
           const Spacer(),
+          OutlinedButton.icon(
+            onPressed: onProfile,
+            icon: const Icon(Icons.manage_accounts_outlined),
+            label: const Text('Profile'),
+          ),
+          const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: onLogout,
             icon: const Icon(Icons.logout),
@@ -302,8 +323,11 @@ class _Header extends StatelessWidget {
             children: [
               Text(
                 lang.text('Farm Dashboard', 'খামার ড্যাশবোর্ড'),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
+                  height: 1.05,
                 ),
               ),
               const SizedBox(height: 4),
@@ -312,9 +336,11 @@ class _Header extends StatelessWidget {
                   'Today and month-to-date operating snapshot',
                   'আজ এবং চলতি মাসের খামারের হিসাব',
                 ),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF526166)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF526166),
+                ),
               ),
             ],
           ),
@@ -332,16 +358,16 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         if (compactActions)
-          IconButton.outlined(
-            tooltip: lang.isBangla ? 'EN' : 'Bangla',
+          OutlinedButton.icon(
             onPressed: lang.toggle,
-            icon: const Icon(Icons.translate),
+            icon: const Icon(Icons.translate, size: 18),
+            label: Text(lang.isBangla ? 'English' : 'বাংলা'),
           )
         else
           OutlinedButton.icon(
             onPressed: lang.toggle,
             icon: const Icon(Icons.translate),
-            label: Text(lang.isBangla ? 'EN' : 'বাংলা'),
+            label: Text(lang.isBangla ? 'English' : 'বাংলা'),
           ),
         const SizedBox(width: 10),
         IconButton.outlined(

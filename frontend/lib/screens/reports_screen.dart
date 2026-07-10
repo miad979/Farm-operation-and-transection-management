@@ -40,7 +40,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             TextButton.icon(
               onPressed: lang.toggle,
               icon: const Icon(Icons.translate),
-              label: Text(lang.isBangla ? 'EN' : 'বাংলা'),
+              label: Text(lang.isBangla ? 'English' : 'বাংলা'),
             ),
             IconButton(
               tooltip: lang.text('Refresh', 'রিফ্রেশ'),

@@ -34,12 +34,16 @@ class _PersonalMoneyScreenState extends State<PersonalMoneyScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(lang.text('My Money', 'আমার টাকা')),
+        title: Text(
+          lang.text('Personal Money', 'ব্যক্তিগত টাকা'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           TextButton.icon(
             onPressed: lang.toggle,
             icon: const Icon(Icons.translate),
-            label: Text(lang.isBangla ? 'EN' : 'বাংলা'),
+            label: Text(lang.isBangla ? 'English' : 'বাংলা'),
           ),
           IconButton(
             tooltip: lang.text('Refresh', 'রিফ্রেশ'),

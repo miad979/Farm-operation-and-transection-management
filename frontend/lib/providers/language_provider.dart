@@ -5,6 +5,12 @@ class LanguageProvider extends ChangeNotifier {
 
   bool get isBangla => _isBangla;
 
+  void setBangla(bool value) {
+    if (_isBangla == value) return;
+    _isBangla = value;
+    notifyListeners();
+  }
+
   void toggle() {
     _isBangla = !_isBangla;
     notifyListeners();
