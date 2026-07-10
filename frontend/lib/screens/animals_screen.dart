@@ -490,6 +490,7 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 560;
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -520,46 +521,34 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
                 decoration: const InputDecoration(labelText: 'Name'),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _select('Type', _type, [
-                      'Cow',
-                      'Ox',
-                      'Buffalo',
-                      'Calf',
-                      'Heifer',
-                      'Bull',
-                    ], (v) => setState(() => _type = v)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _select('Gender', _gender, [
-                      'Female',
-                      'Male',
-                    ], (v) => setState(() => _gender = v)),
-                  ),
-                ],
+              _fieldPair(
+                compact: compact,
+                first: _select('Type', _type, [
+                  'Cow',
+                  'Ox',
+                  'Buffalo',
+                  'Calf',
+                  'Heifer',
+                  'Bull',
+                ], (v) => setState(() => _type = v)),
+                second: _select('Gender', _gender, [
+                  'Female',
+                  'Male',
+                ], (v) => setState(() => _gender = v)),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _breed,
-                      decoration: const InputDecoration(labelText: 'Breed'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _select('Health', _health, [
-                      'Healthy',
-                      'Sick',
-                      'Treatment',
-                      'Pregnant',
-                    ], (v) => setState(() => _health = v)),
-                  ),
-                ],
+              _fieldPair(
+                compact: compact,
+                first: TextField(
+                  controller: _breed,
+                  decoration: const InputDecoration(labelText: 'Breed'),
+                ),
+                second: _select('Health', _health, [
+                  'Healthy',
+                  'Sick',
+                  'Treatment',
+                  'Pregnant',
+                ], (v) => setState(() => _health = v)),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -603,6 +592,26 @@ class _AnimalFormSheetState extends State<_AnimalFormSheet> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _fieldPair({
+    required bool compact,
+    required Widget first,
+    required Widget second,
+  }) {
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [first, const SizedBox(height: 12), second],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 10),
+        Expanded(child: second),
+      ],
     );
   }
 

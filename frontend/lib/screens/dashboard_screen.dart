@@ -82,7 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       wide ? 28 : 16,
                       20,
                       wide ? 28 : 16,
-                      32,
+                      wide ? 32 : 96,
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
@@ -158,11 +158,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showQuickRecord(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Record'),
-      ),
+      floatingActionButton: wide
+          ? FloatingActionButton.extended(
+              onPressed: () => _showQuickRecord(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Record'),
+            )
+          : null,
     );
   }
 }
@@ -420,7 +422,7 @@ class _KpiGrid extends StatelessWidget {
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: 112,
+            mainAxisExtent: width < 560 ? 92 : 112,
           ),
           itemBuilder: (context, index) => _KpiCard(data: cards[index]),
         );
@@ -436,21 +438,22 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 560;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(compact ? 14 : 16),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: compact ? 42 : 48,
+              height: compact ? 42 : 48,
               decoration: BoxDecoration(
                 color: data.color.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(data.icon, color: data.color),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: compact ? 12 : 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,17 +461,21 @@ class _KpiCard extends StatelessWidget {
                 children: [
                   Text(
                     data.label,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF526166),
-                    ),
+                    style:
+                        (compact
+                                ? Theme.of(context).textTheme.bodySmall
+                                : Theme.of(context).textTheme.bodyMedium)
+                            ?.copyWith(color: const Color(0xFF526166)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     data.value,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style:
+                        (compact
+                                ? Theme.of(context).textTheme.titleLarge
+                                : Theme.of(context).textTheme.headlineSmall)
+                            ?.copyWith(fontWeight: FontWeight.w900),
                   ),
                 ],
               ),
@@ -596,7 +603,7 @@ class _ControlPanel extends StatelessWidget {
               crossAxisCount: columns,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              mainAxisExtent: 76,
+              mainAxisExtent: constraints.maxWidth > 560 ? 76 : 64,
             ),
             itemBuilder: (context, index) =>
                 _ControlTile(action: actions[index]),
@@ -622,19 +629,27 @@ class _ControlTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFFF7FAF9),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: action.onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFD8E5E1)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
+    final compact = MediaQuery.sizeOf(context).width < 560;
+    final content = compact
+        ? Row(
+            children: [
+              Icon(action.icon, color: const Color(0xFF147D64), size: 20),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  action.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+              ),
+            ],
+          )
+        : Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -653,7 +668,23 @@ class _ControlTile extends StatelessWidget {
                 ),
               ),
             ],
+          );
+    return Material(
+      color: const Color(0xFFF7FAF9),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 12,
+            vertical: compact ? 8 : 10,
           ),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFD8E5E1)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: content,
         ),
       ),
     );
@@ -832,6 +863,7 @@ class _CashChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 560;
     final income = readNum(farm.monthly, ['income', 'total']);
     final expenses = readNum(farm.monthly, ['expenses', 'total']);
     final withdrawals =
@@ -850,7 +882,7 @@ class _CashChart extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w800),
       ),
       child: SizedBox(
-        height: 260,
+        height: compact ? 180 : 260,
         child: BarChart(
           BarChartData(
             maxY: maxY.toDouble(),
@@ -918,6 +950,7 @@ class _MilkChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 560;
     final today = readNum(farm.dashboard, ['milk_production', 'total_liters']);
     final average = readNum(farm.dashboard, [
       'milk_production',
@@ -940,7 +973,7 @@ class _MilkChart extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w800),
       ),
       child: SizedBox(
-        height: 238,
+        height: compact ? 172 : 238,
         child: LineChart(
           LineChartData(
             minY: 0,
@@ -989,12 +1022,13 @@ class _HealthPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 560;
     final healthy = farm.healthyAnimals;
     final attention = math.max(0, farm.totalAnimals - healthy);
     return _Panel(
       title: 'Herd condition',
       child: SizedBox(
-        height: 224,
+        height: compact ? 174 : 224,
         child: Row(
           children: [
             Expanded(
