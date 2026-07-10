@@ -13,10 +13,18 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  final _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -30,6 +38,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     final farm = context.watch<FarmProvider>();
     final lang = context.watch<LanguageProvider>();
+    final query = _searchController.text.trim().toLowerCase();
+    final milkRecords = _filteredRecords(farm.milkRecords, query);
+    final sales = _filteredRecords(farm.sales, query);
+    final expenses = _filteredRecords(farm.expenses, query);
+    final withdrawals = _filteredRecords(farm.withdrawals, query);
+    final capital = _filteredRecords(farm.capitalContributions, query);
+    final inventory = _filteredRecords(farm.inventory, query);
 
     return DefaultTabController(
       length: 7,
@@ -61,141 +76,206 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            _LedgerTab(farm: farm),
-            _RecordList(
-              records: farm.milkRecords,
-              emptyText: lang.text(
-                'No milk records yet.',
-                'এখনও দুধের রেকর্ড নেই।',
-              ),
-              actionLabel: lang.text('Add milk', 'দুধ যোগ করুন'),
-              onAdd: () => _showMilkSheet(context),
-              builder: (record) => _RecordTile(
-                icon: Icons.water_drop_outlined,
-                title: '${record['animal_name'] ?? lang.text('Animal', 'পশু')}',
-                subtitle:
-                    '${record['production_date'] ?? ''} • ${record['quality_grade'] ?? ''}',
-                trailing: '${record['total_milk'] ?? 0} L',
-                onEdit: () => _showMilkSheet(context, record: record),
-                extraActions: [
-                  IconButton(
-                    tooltip: 'Delete with reason',
-                    onPressed: () =>
-                        _showDeleteMilkReasonSheet(context, record),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ),
+            _HistorySearchBar(
+              controller: _searchController,
+              onChanged: (_) => setState(() {}),
+              onClear: () {
+                _searchController.clear();
+                setState(() {});
+              },
             ),
-            _RecordList(
-              records: farm.sales,
-              emptyText: lang.text('No sales yet.', 'এখনও বিক্রি নেই।'),
-              actionLabel: lang.text('Add sale', 'বিক্রি যোগ করুন'),
-              onAdd: () => _showSaleSheet(context),
-              builder: (record) => _RecordTile(
-                icon: record['sale_type'] == 'cattle'
-                    ? Icons.pets_outlined
-                    : Icons.trending_up,
-                title:
-                    '${record['sale_type'] ?? ''} ${lang.text('sale', 'বিক্রি')}',
-                subtitle:
-                    '${record['sale_date'] ?? ''} • ${record['description'] ?? ''}',
-                trailing: _money(record['total_amount']),
-                onEdit: () => _showSaleSheet(context, record: record),
-              ),
-            ),
-            _RecordList(
-              records: farm.expenses,
-              emptyText: lang.text(
-                'No farm costs yet.',
-                'এখনও ব্যবসার খরচ নেই।',
-              ),
-              actionLabel: lang.text('Add farm cost', 'খামার খরচ যোগ করুন'),
-              onAdd: () => _showExpenseSheet(context),
-              builder: (record) => _RecordTile(
-                icon: Icons.receipt_long_outlined,
-                title: '${record['category'] ?? lang.text('Expense', 'খরচ')}',
-                subtitle:
-                    '${record['expense_date'] ?? ''} • ${record['description'] ?? ''}',
-                trailing: _money(record['amount']),
-                onEdit: () => _showExpenseSheet(context, record: record),
-              ),
-            ),
-            _RecordList(
-              records: farm.withdrawals,
-              emptyText: lang.text(
-                'No money taken from farm yet.',
-                'এখনও খামার থেকে পকেটে টাকার রেকর্ড নেই।',
-              ),
-              actionLabel: lang.text('Take money', 'টাকা নিন'),
-              onAdd: () => _showTakenMoneySheet(context),
-              builder: (record) => _RecordTile(
-                icon: Icons.home_work_outlined,
-                title: '${record['reason'] ?? lang.text('Pocket', 'পকেট')}',
-                subtitle:
-                    '${record['withdrawal_date'] ?? ''} • ${record['description'] ?? ''}',
-                trailing: _money(record['amount']),
-                onEdit: () => _showTakenMoneySheet(context, record: record),
-              ),
-            ),
-            _RecordList(
-              records: farm.capitalContributions,
-              emptyText: lang.text(
-                'No investment records yet.',
-                'এখনও মূলধনের রেকর্ড নেই।',
-              ),
-              actionLabel: lang.text('Add investment', 'বিনিয়োগ যোগ'),
-              onAdd: () => _showInvestmentSheet(context),
-              builder: (record) => _RecordTile(
-                icon: Icons.savings_outlined,
-                title:
-                    '${record['source_type'] ?? ''} • ${record['contributor_name'] ?? ''}',
-                subtitle:
-                    '${record['contribution_date'] ?? ''} • ${record['description'] ?? ''}',
-                trailing: _money(record['amount']),
-                onEdit: () => _showInvestmentSheet(context, record: record),
-              ),
-            ),
-            _RecordList(
-              records: farm.inventory,
-              emptyText: lang.text(
-                'No stock records yet.',
-                'এখনও স্টক রেকর্ড নেই।',
-              ),
-              actionLabel: lang.text('Add feed/stock', 'খাদ্য/স্টক যোগ'),
-              onAdd: () => _showStockSheet(context),
-              builder: (record) => _RecordTile(
-                icon: Icons.inventory_2_outlined,
-                title: '${record['item_name'] ?? lang.text('Item', 'আইটেম')}',
-                subtitle:
-                    '${record['item_type'] ?? ''} • ${record['quantity'] ?? 0} ${record['unit'] ?? ''} • Daily ${record['daily_usage_quantity'] ?? 0}',
-                trailing: 'Warn ${record['reorder_level'] ?? 0}',
-                onEdit: () => _showStockSheet(context, record: record),
-                extraActions: [
-                  IconButton(
-                    tooltip: lang.text('Add amount', 'পরিমাণ যোগ'),
-                    onPressed: () => _showStockMoveSheet(
-                      context,
-                      record: record,
-                      stockIn: true,
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _LedgerTab(farm: farm),
+                  _RecordList(
+                    records: milkRecords,
+                    emptyText: lang.text(
+                      'No milk records yet.',
+                      'এখনও দুধের রেকর্ড নেই।',
                     ),
-                    icon: const Icon(Icons.add_box_outlined),
-                  ),
-                  IconButton(
-                    tooltip: lang.text('Use/remove', 'ব্যবহার/কমাও'),
-                    onPressed: () => _showStockMoveSheet(
-                      context,
-                      record: record,
-                      stockIn: false,
+                    actionLabel: lang.text('Add milk', 'দুধ যোগ করুন'),
+                    onAdd: () => _showMilkSheet(context),
+                    builder: (record) => _RecordTile(
+                      icon: Icons.water_drop_outlined,
+                      title:
+                          '${record['animal_name'] ?? lang.text('Animal', 'পশু')}',
+                      subtitle:
+                          '${record['production_date'] ?? ''} • ${record['quality_grade'] ?? ''}',
+                      trailing: '${record['total_milk'] ?? 0} L',
+                      onEdit: () => _showMilkSheet(context, record: record),
+                      extraActions: [
+                        IconButton(
+                          tooltip: 'Delete with reason',
+                          onPressed: () =>
+                              _showDeleteMilkReasonSheet(context, record),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.indeterminate_check_box_outlined),
+                  ),
+                  _RecordList(
+                    records: sales,
+                    emptyText: lang.text('No sales yet.', 'এখনও বিক্রি নেই।'),
+                    actionLabel: lang.text('Add sale', 'বিক্রি যোগ করুন'),
+                    onAdd: () => _showSaleSheet(context),
+                    builder: (record) => _RecordTile(
+                      icon: record['sale_type'] == 'cattle'
+                          ? Icons.pets_outlined
+                          : Icons.trending_up,
+                      title:
+                          '${record['sale_type'] ?? ''} ${lang.text('sale', 'বিক্রি')}',
+                      subtitle:
+                          '${record['sale_date'] ?? ''} • ${record['description'] ?? ''}',
+                      trailing: _money(record['total_amount']),
+                      onEdit: () => _showSaleSheet(context, record: record),
+                    ),
+                  ),
+                  _RecordList(
+                    records: expenses,
+                    emptyText: lang.text(
+                      'No farm costs yet.',
+                      'এখনও ব্যবসার খরচ নেই।',
+                    ),
+                    actionLabel: lang.text(
+                      'Add farm cost',
+                      'খামার খরচ যোগ করুন',
+                    ),
+                    onAdd: () => _showExpenseSheet(context),
+                    builder: (record) => _RecordTile(
+                      icon: Icons.receipt_long_outlined,
+                      title:
+                          '${record['category'] ?? lang.text('Expense', 'খরচ')}',
+                      subtitle:
+                          '${record['expense_date'] ?? ''} • ${record['description'] ?? ''}',
+                      trailing: _money(record['amount']),
+                      onEdit: () => _showExpenseSheet(context, record: record),
+                    ),
+                  ),
+                  _RecordList(
+                    records: withdrawals,
+                    emptyText: lang.text(
+                      'No money taken from farm yet.',
+                      'এখনও খামার থেকে পকেটে টাকার রেকর্ড নেই।',
+                    ),
+                    actionLabel: lang.text('Take money', 'টাকা নিন'),
+                    onAdd: () => _showTakenMoneySheet(context),
+                    builder: (record) => _RecordTile(
+                      icon: Icons.home_work_outlined,
+                      title:
+                          '${record['reason'] ?? lang.text('Pocket', 'পকেট')}',
+                      subtitle:
+                          '${record['withdrawal_date'] ?? ''} • ${record['description'] ?? ''}',
+                      trailing: _money(record['amount']),
+                      onEdit: () =>
+                          _showTakenMoneySheet(context, record: record),
+                    ),
+                  ),
+                  _RecordList(
+                    records: capital,
+                    emptyText: lang.text(
+                      'No investment records yet.',
+                      'এখনও মূলধনের রেকর্ড নেই।',
+                    ),
+                    actionLabel: lang.text('Add investment', 'বিনিয়োগ যোগ'),
+                    onAdd: () => _showInvestmentSheet(context),
+                    builder: (record) => _RecordTile(
+                      icon: Icons.savings_outlined,
+                      title:
+                          '${record['source_type'] ?? ''} • ${record['contributor_name'] ?? ''}',
+                      subtitle:
+                          '${record['contribution_date'] ?? ''} • ${record['description'] ?? ''}',
+                      trailing: _money(record['amount']),
+                      onEdit: () =>
+                          _showInvestmentSheet(context, record: record),
+                    ),
+                  ),
+                  _RecordList(
+                    records: inventory,
+                    emptyText: lang.text(
+                      'No stock records yet.',
+                      'এখনও স্টক রেকর্ড নেই।',
+                    ),
+                    actionLabel: lang.text('Add feed/stock', 'খাদ্য/স্টক যোগ'),
+                    onAdd: () => _showStockSheet(context),
+                    builder: (record) => _RecordTile(
+                      icon: Icons.inventory_2_outlined,
+                      title:
+                          '${record['item_name'] ?? lang.text('Item', 'আইটেম')}',
+                      subtitle:
+                          '${record['item_type'] ?? ''} • ${record['quantity'] ?? 0} ${record['unit'] ?? ''} • Daily ${record['daily_usage_quantity'] ?? 0}',
+                      trailing: 'Warn ${record['reorder_level'] ?? 0}',
+                      onEdit: () => _showStockSheet(context, record: record),
+                      extraActions: [
+                        IconButton(
+                          tooltip: lang.text('Add amount', 'পরিমাণ যোগ'),
+                          onPressed: () => _showStockMoveSheet(
+                            context,
+                            record: record,
+                            stockIn: true,
+                          ),
+                          icon: const Icon(Icons.add_box_outlined),
+                        ),
+                        IconButton(
+                          tooltip: lang.text('Use/remove', 'ব্যবহার/কমাও'),
+                          onPressed: () => _showStockMoveSheet(
+                            context,
+                            record: record,
+                            stockIn: false,
+                          ),
+                          icon: const Icon(
+                            Icons.indeterminate_check_box_outlined,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistorySearchBar extends StatelessWidget {
+  const _HistorySearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasQuery = controller.text.trim().isNotEmpty;
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+        child: TextField(
+          controller: controller,
+          onChanged: onChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: 'Search records',
+            hintText: 'Name, date, amount, note',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: hasQuery
+                ? IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: onClear,
+                    icon: const Icon(Icons.close),
+                  )
+                : null,
+          ),
         ),
       ),
     );
@@ -1650,6 +1730,14 @@ int? _recordId(Map<String, dynamic>? record) {
   final value = record?['id'];
   if (value is int) return value;
   return int.tryParse('$value');
+}
+
+List<dynamic> _filteredRecords(List<dynamic> records, String query) {
+  if (query.isEmpty) return records;
+  return records.where((record) {
+    if (record is! Map<String, dynamic>) return false;
+    return record.values.any((value) => '$value'.toLowerCase().contains(query));
+  }).toList();
 }
 
 _LedgerSummary _summaryForDay(FarmProvider farm, DateTime day) {

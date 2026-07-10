@@ -1027,6 +1027,37 @@ class _CashChart extends StatelessWidget {
         (farm.monthly.containsKey('farm_to_pocket')
             ? 0
             : readNum(farm.monthly, ['family_withdrawals']));
+    if (compact) {
+      return _Panel(
+        title: 'Money summary',
+        action: Text(
+          _money(readNum(farm.monthly, ['profit'])),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        child: Column(
+          children: [
+            _FormulaRow(
+              label: 'Sales',
+              value: _money(income),
+              icon: Icons.trending_up,
+              color: const Color(0xFF147D64),
+            ),
+            _FormulaRow(
+              label: 'Costs',
+              value: _money(expenses),
+              icon: Icons.trending_down,
+              color: const Color(0xFFDC2626),
+            ),
+            _FormulaRow(
+              label: 'Taken',
+              value: _money(withdrawals),
+              icon: Icons.home_work_outlined,
+              color: const Color(0xFFB45309),
+            ),
+          ],
+        ),
+      );
+    }
     final maxY = math.max(
       100,
       [income, expenses, withdrawals].reduce(math.max) * 1.25,
@@ -1122,6 +1153,32 @@ class _MilkChart extends StatelessWidget {
       monthlyAverage,
       math.max(today, monthlyAverage) * 1.08,
     ];
+    if (compact) {
+      return _Panel(
+        title: 'Milk summary',
+        action: Text(
+          '${today.toStringAsFixed(1)} L today',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _MiniStat(
+                label: 'Per cow',
+                value: '${average.toStringAsFixed(1)} L',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MiniStat(
+                label: 'Monthly avg',
+                value: '${monthlyAverage.toStringAsFixed(1)} L',
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return _Panel(
       title: 'Production rhythm',
       action: Text(

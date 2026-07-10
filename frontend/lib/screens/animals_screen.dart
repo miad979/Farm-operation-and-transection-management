@@ -56,31 +56,49 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
           slivers: [
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 92),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _SummaryStrip(farm: farm),
-                  const SizedBox(height: 14),
-                  _Toolbar(
-                    controller: _searchController,
-                    filter: _filter,
-                    onFilterChanged: (value) => setState(() => _filter = value),
-                    onSearchChanged: (_) => setState(() {}),
+              sliver: SliverMainAxisGroup(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        _SummaryStrip(farm: farm),
+                        const SizedBox(height: 14),
+                        _Toolbar(
+                          controller: _searchController,
+                          filter: _filter,
+                          onFilterChanged: (value) =>
+                              setState(() => _filter = value),
+                          onSearchChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 14),
                   if (animals.isEmpty)
-                    const _EmptyState()
+                    const SliverToBoxAdapter(child: _EmptyState())
                   else
-                    LayoutBuilder(
+                    SliverLayoutBuilder(
                       builder: (context, constraints) {
-                        final columns = constraints.maxWidth > 1040
+                        final width = constraints.crossAxisExtent;
+                        final columns = width > 1040
                             ? 3
-                            : constraints.maxWidth > 680
+                            : width > 680
                             ? 2
                             : 1;
-                        return GridView.builder(
-                          itemCount: animals.length,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
+                        return SliverGrid(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final animal = animals[index];
+                            return _AnimalCard(
+                              animal: animal,
+                              onMilkRecord: () =>
+                                  _showMilkSheet(context, animal),
+                              onManage: () =>
+                                  _showAnimalSheet(context, animal: animal),
+                            );
+                          }, childCount: animals.length),
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: columns,
@@ -88,19 +106,10 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
                                 mainAxisSpacing: 12,
                                 mainAxisExtent: 190,
                               ),
-                          itemBuilder: (context, index) => _AnimalCard(
-                            animal: animals[index],
-                            onMilkRecord: () =>
-                                _showMilkSheet(context, animals[index]),
-                            onManage: () => _showAnimalSheet(
-                              context,
-                              animal: animals[index],
-                            ),
-                          ),
                         );
                       },
                     ),
-                ]),
+                ],
               ),
             ),
           ],
@@ -230,10 +239,21 @@ class _Toolbar extends StatelessWidget {
               child: TextField(
                 controller: controller,
                 onChanged: onSearchChanged,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Search animals',
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: controller.text.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            controller.clear();
+                            onSearchChanged('');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
                 ),
+                textInputAction: TextInputAction.search,
               ),
             ),
             SizedBox(
