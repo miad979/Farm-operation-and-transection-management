@@ -287,6 +287,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
+    final compactActions = MediaQuery.sizeOf(context).width < 560;
     return Row(
       children: [
         Expanded(
@@ -324,17 +325,31 @@ class _Header extends StatelessWidget {
               : const Icon(Icons.refresh),
         ),
         const SizedBox(width: 10),
-        OutlinedButton.icon(
-          onPressed: lang.toggle,
-          icon: const Icon(Icons.translate),
-          label: Text(lang.isBangla ? 'EN' : 'বাংলা'),
-        ),
+        if (compactActions)
+          IconButton.outlined(
+            tooltip: lang.isBangla ? 'EN' : 'Bangla',
+            onPressed: lang.toggle,
+            icon: const Icon(Icons.translate),
+          )
+        else
+          OutlinedButton.icon(
+            onPressed: lang.toggle,
+            icon: const Icon(Icons.translate),
+            label: Text(lang.isBangla ? 'EN' : 'বাংলা'),
+          ),
         const SizedBox(width: 10),
-        FilledButton.icon(
-          onPressed: onAddRecord,
-          icon: const Icon(Icons.add),
-          label: Text(lang.text('Add record', 'রেকর্ড যোগ')),
-        ),
+        if (compactActions)
+          IconButton.filled(
+            tooltip: 'Add record',
+            onPressed: onAddRecord,
+            icon: const Icon(Icons.add),
+          )
+        else
+          FilledButton.icon(
+            onPressed: onAddRecord,
+            icon: const Icon(Icons.add),
+            label: Text(lang.text('Add record', 'রেকর্ড যোগ')),
+          ),
       ],
     );
   }
