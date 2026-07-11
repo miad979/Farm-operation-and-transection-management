@@ -3,13 +3,24 @@ from pathlib import Path
 
 from decouple import config
 
+
+def parse_debug(value):
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"0", "false", "f", "no", "n", "off", "release", "production", "prod"}:
+        return False
+    if normalized in {"1", "true", "t", "yes", "y", "on", "debug", "development", "dev"}:
+        return True
+    raise ValueError(f"Invalid DEBUG value: {value}")
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config(
     "SECRET_KEY",
     default="django-insecure-local-dev-secret-key-minimum-32-characters",
 )
-DEBUG = config("DEBUG", default=True, cast=bool)
+DEBUG = config("DEBUG", default=True, cast=parse_debug)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
